@@ -57,66 +57,89 @@
      Receives its own NEON // INSTRUMENT redesign in a later slice.
      =================================================================== -->
 <main class="wrap" id="app">
-  <section id="detail-view" class="view" hidden aria-label="Asset detail">
-    <button id="back-to-grid" class="link-button">&larr; Back to equilibrium field</button>
+  <section id="detail-view" class="view" hidden aria-label="Asset diagnostic">
 
-    <div class="view-heading">
-      <h1 id="detail-symbol">—</h1>
-      <span id="detail-status-badge" class="badge">—</span>
+    <!-- ── A. ASSET / PARITY DIAGNOSTIC HEADER ─────────────────── -->
+    <div class="dx-head">
+      <button id="back-to-grid" class="link-button">&larr; Equilibrium field</button>
+
+      <div class="dx-ident">
+        <div class="dx-idl">
+          <h1 id="detail-symbol">&mdash;</h1>
+          <span id="detail-status-badge" class="badge">&mdash;</span>
+        </div>
+        <div class="dx-idr">
+          <div class="dx-dev" id="detail-premium">&mdash;</div>
+          <div class="dx-dir" id="detail-direction">&mdash;</div>
+        </div>
+      </div>
+
+      <!-- single-asset parity-origin rail: same instrument language as the field -->
+      <div class="dx-rail" id="detail-rail">
+        <span class="dx-datum"></span>
+        <span class="dx-origin"></span>
+        <span class="dx-olabel">0.00% PARITY</span>
+        <span class="dx-beam" id="dx-beam"></span>
+        <span class="dx-brk" id="dx-brk"></span>
+        <span class="dx-end" id="dx-end"></span>
+        <span class="dx-pole l">&#9668; DISCOUNT</span>
+        <span class="dx-pole r">PREMIUM &#9658;</span>
+      </div>
+
+      <div class="dx-strip">
+        <div class="dx-cell"><span class="micro">Reference</span><span class="dx-val" id="detail-reference">&mdash;</span></div>
+        <div class="dx-cell"><span class="micro">On-chain</span><span class="dx-val" id="detail-secondary">&mdash;</span></div>
+        <div class="dx-cell"><span class="micro">Quote</span><span class="dx-val sm" id="detail-rh-price">&mdash;</span></div>
+        <div class="dx-cell"><span class="micro">Snapshot</span><span class="dx-val sm" id="detail-last-update">&mdash;</span></div>
+      </div>
     </div>
 
-    <div class="detail-grid">
-      <div class="panel"><h2>Parity</h2>
-        <dl class="kv">
-          <dt>Reference</dt><dd id="detail-reference">—</dd>
-          <dt>On-chain</dt><dd id="detail-secondary">—</dd>
-          <dt>Deviation</dt><dd id="detail-premium">—</dd>
-          <dt>Intelligence</dt><dd id="detail-intelligence">—</dd>
-        </dl>
-      </div>
-      <div class="panel"><h2>Market state</h2>
-        <dl class="kv">
-          <dt>Quote</dt><dd id="detail-rh-price">—</dd>
-          <dt>Oracle</dt><dd id="detail-oracle">—</dd>
-          <dt>Asset</dt><dd id="detail-asset-status">—</dd>
-        </dl>
-      </div>
-      <div class="panel"><h2>Holder concentration</h2>
-        <dl class="kv">
-          <dt>Top 1</dt><dd id="detail-top1">—</dd>
-          <dt>Top 5</dt><dd id="detail-top5">—</dd>
-          <dt>Top 10</dt><dd id="detail-top10">—</dd>
-        </dl>
-      </div>
-      <div class="panel"><h2>Identity</h2>
-        <dl class="kv">
-          <dt>Token</dt><dd id="detail-token-address" class="mono">—</dd>
-          <dt>Pool</dt><dd id="detail-pool-address" class="mono">—</dd>
-        </dl>
-      </div>
-    </div>
+    <!-- ── B. INTELLIGENCE BAY ──────────────────────────────────── -->
+    <section class="bay-sec">
+      <div class="bay-hd"><span class="micro">Intelligence</span><span class="micro" id="intel-maturity">&mdash;</span></div>
+      <div class="bay-grid" id="intel-grid"></div>
+      <div class="bay-note" id="intel-episode" hidden></div>
+    </section>
 
-    <div class="panel"><h2>History</h2>
-      <div class="chart-tabs">
-        <button class="chart-tab active" data-series="referencePrice">Reference</button>
-        <button class="chart-tab" data-series="secondaryPrice">On-chain</button>
-        <button class="chart-tab" data-series="premiumDiscountPct">Deviation</button>
+    <!-- ── HISTORICAL SIGNAL (D1: shell restyled, logic untouched) ── -->
+    <section class="bay-sec">
+      <div class="bay-hd"><span class="micro">Historical signal</span>
+        <div class="chart-tabs">
+          <button class="chart-tab active" data-series="referencePrice">Reference</button>
+          <button class="chart-tab" data-series="secondaryPrice">On-chain</button>
+          <button class="chart-tab" data-series="premiumDiscountPct">Deviation</button>
+        </div>
       </div>
       <div id="history-chart-wrap">
         <svg id="history-chart" viewBox="0 0 900 260" preserveAspectRatio="none" role="img" aria-label="Historical series"></svg>
       </div>
-      <p class="faint small" style="margin-bottom:0">Gaps are real: the value was unavailable at that moment, never zero.</p>
-    </div>
+      <p class="micro dx-foot">Gaps are real &middot; the value was unavailable at that moment, never zero</p>
+    </section>
 
-    <div class="panel"><h2>Provenance</h2>
-      <div class="table-scroll">
-        <table class="data-table" id="provenance-table">
-          <thead><tr><th scope="col">Field</th><th scope="col">Status</th><th scope="col">Source</th><th scope="col">Detail</th></tr></thead>
-          <tbody id="provenance-table-body"></tbody>
-        </table>
+    <!-- ── D. MARKET / TOKEN DIAGNOSTICS ────────────────────────── -->
+    <section class="bay-sec">
+      <div class="bay-hd"><span class="micro">Market &amp; token diagnostics</span></div>
+      <div class="diag">
+        <div class="diag-col">
+          <div class="diag-row"><span class="micro">Oracle</span><span class="diag-v" id="detail-oracle">&mdash;</span></div>
+          <div class="diag-row"><span class="micro">Asset status</span><span class="diag-v" id="detail-asset-status">&mdash;</span></div>
+          <div class="diag-row"><span class="micro">Holder top 1</span><span class="diag-v" id="detail-top1">&mdash;</span></div>
+          <div class="diag-row"><span class="micro">Holder top 5</span><span class="diag-v" id="detail-top5">&mdash;</span></div>
+          <div class="diag-row"><span class="micro">Holder top 10</span><span class="diag-v" id="detail-top10">&mdash;</span></div>
+        </div>
+        <div class="diag-col">
+          <div class="diag-row"><span class="micro">Canonical token</span><span class="diag-v addr" id="detail-token-address">&mdash;</span></div>
+          <div class="diag-row"><span class="micro">Verified pool</span><span class="diag-v addr" id="detail-pool-address">&mdash;</span></div>
+        </div>
       </div>
-      <p class="faint small" style="margin-bottom:0;margin-top:16px">Last snapshot: <span id="detail-last-update">—</span></p>
-    </div>
+    </section>
+
+    <!-- ── E. PROVENANCE / DATA HEALTH ──────────────────────────── -->
+    <section class="bay-sec">
+      <div class="bay-hd"><span class="micro">Source health</span><span class="micro" id="health-summary">&mdash;</span></div>
+      <div class="health" id="provenance-table-body"></div>
+    </section>
+
   </section>
 </main>
 

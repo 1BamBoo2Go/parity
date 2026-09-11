@@ -380,6 +380,130 @@ function fieldOrDash(field, formatter) {
 let currentHistory = null;
 let currentSeries = "referencePrice";
 
+/**
+ * Render the single-asset parity-origin rail in the diagnostic header.
+ * Reuses tScale()/chPct() — the SAME truthful scale as the equilibrium
+ * field. Position is never adjusted for any presentational reason, and an
+ * unavailable deviation draws no beam and no endpoint (never implies zero).
+ */
+function renderDetailRail(value) {
+  const rail = document.getElementById("detail-rail");
+  const beam = document.getElementById("dx-beam");
+  const brk = document.getElementById("dx-brk");
+  const end = document.getElementById("dx-end");
+  if (!rail || !beam || !brk || !end) return;
+
+  rail.querySelectorAll(".dx-grad,.dx-gl").forEach((n) => n.remove());
+  const dir = value === null ? "" : value >= 0 ? "p" : "d";
+  beam.className = `dx-beam ${dir}`;
+  brk.className = `dx-brk ${dir}`;
+  end.className = `dx-end ${dir}`;
+
+  if (value === null) {
+    beam.style.width = "0%";
+    brk.style.display = "none";
+    end.style.display = "none";
+    return;
+  }
+  brk.style.display = "";
+  end.style.display = "";
+
+  // graduations, drawn with the same scale as the field
+  [0.1, 0.25, 0.5, 1].filter((v) => v <= domainMax).forEach((v) =>
+    [v, -v].forEach((sv) => {
+      const x = chPct(sv);
+      rail.insertAdjacentHTML(
+        "beforeend",
+        `<span class="dx-grad" style="left:${x}%"></span>` +
+          `<span class="dx-gl" style="left:${x}%">${fmtSignedPct(sv, sv % 1 === 0 ? 0 : 2)}</span>`,
+      );
+    }),
+  );
+
+  const reach = Math.abs(tScale(value)) * CH_SPAN;
+  const endX = chPct(value);
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
+      beam.style.width = `${reach}%`;
+      brk.style.left = `${endX}%`;
+      end.style.left = `${endX}%`;
+    }),
+  );
+}
+
+/**
+ * Intelligence bay, built from intelligenceDetail (previously unused).
+ *
+ * Terminology is deliberate: "Baseline dispersion (MAD)" and "MAD multiple".
+ * Never "typical deviation", never z-score. Nothing here is fabricated —
+ * every cell is either a real contract value or an explicit unavailable.
+ */
+function renderIntelligenceBay(intelDetail) {
+  const grid = document.getElementById("intel-grid");
+  const epi = document.getElementById("intel-episode");
+  if (!grid) return;
+
+  if (!intelDetail) {
+    grid.innerHTML = `<div class="ib"><span class="ib-l">Status</span><span class="ib-v na">Unavailable</span></div>`;
+    if (epi) epi.hidden = true;
+    setText("intel-maturity", "\u2014");
+    return;
+  }
+
+  const b = intelDetail.baseline || {};
+  // num() distinguishes a real 0 from null/undefined. dispersionMad === 0
+  // is a legitimate measurement on flat history and must render as 0.
+  const num = (v, digits, suffix) =>
+    typeof v === "number" && Number.isFinite(v)
+      ? `${v.toFixed(digits)}${suffix || ""}`
+      : null;
+
+  const cell = (label, value, sub) =>
+    `<div class="ib"><span class="ib-l">${label}</span>` +
+    (value === null
+      ? `<span class="ib-v na">Unavailable</span>`
+      : `<span class="ib-v">${value}</span>`) +
+    (sub ? `<span class="ib-s">${sub}</span>` : "") +
+    `</div>`;
+
+  const maturity = intelDetail.maturity || "\u2014";
+  setText("intel-maturity", String(maturity).replace(/_/g, " "));
+
+  const cells = [
+    cell("Observations", num(b.observationCount, 0), "eligible"),
+    cell("Baseline period", num(b.elapsedHours, 1, " h"), "observed span"),
+    cell("Baseline median", num(b.medianPct, 4, "%"), "central tendency"),
+    cell("Baseline dispersion", num(b.dispersionMad, 4, "%"), "MAD"),
+    cell("MAD multiple", num(intelDetail.relativeDeviationMultiple, 2, "\u00d7"), "relative to dispersion"),
+    cell(
+      "Classification",
+      intelDetail.classification ? String(intelDetail.classification) : null,
+      intelDetail.classification ? "risk state" : "requires mature baseline",
+    ),
+  ];
+  if (typeof b.excludedByFreshnessCount === "number" && b.excludedByFreshnessCount > 0) {
+    cells.push(cell("Freshness exclusions", num(b.excludedByFreshnessCount, 0), "reference too old"));
+  }
+  grid.innerHTML = cells.join("");
+
+  // Episode: only ever shown from real contract state.
+  if (epi) {
+    const e = intelDetail.episode;
+    if (e && e.state === "active") {
+      epi.hidden = false;
+      epi.textContent =
+        `ACTIVE EPISODE \u00b7 started ${fmtTimestamp(e.dislocationStartedAt)} \u00b7 ` +
+        `${Math.round(e.durationMinutes)} min \u00b7 ${e.consecutiveAbnormalObservations} consecutive observations \u00b7 ` +
+        `peak ${e.peakAbsoluteDeviationPct.toFixed(4)}%`;
+    } else if (e && e.state === "current_observation_unavailable") {
+      epi.hidden = false;
+      epi.textContent = "Current observation unavailable \u00b7 episode state cannot be evaluated";
+    } else {
+      epi.hidden = true;
+    }
+  }
+}
+
 async function loadDetail(symbol) {
   document.getElementById("detail-symbol").textContent = symbol;
   try {
@@ -396,32 +520,100 @@ async function loadDetail(symbol) {
     const history = historyRes.ok ? await historyRes.json() : { points: [] };
 
     document.getElementById("detail-status-badge").replaceWith(badgeWithId("detail-status-badge", detail.overallStatus));
+
+    // ── A. parity state ──
+    const pd = detail.premiumDiscountPct;
+    const dev = pd && pd.status === "ok" && typeof pd.value === "number" ? pd.value : null;
+    const devEl = document.getElementById("detail-premium");
+    const dirEl = document.getElementById("detail-direction");
+    if (dev === null) {
+      devEl.className = "dx-dev na";
+      devEl.textContent = "UNAVAILABLE";
+      if (dirEl) { dirEl.className = "dx-dir"; dirEl.textContent = "NO MEASUREMENT"; }
+    } else {
+      devEl.className = `dx-dev ${dev >= 0 ? "p" : "d"}`;
+      devEl.textContent = fmtSignedPct(dev, 4);
+      if (dirEl) {
+        dirEl.className = `dx-dir ${dev >= 0 ? "p" : "d"}`;
+        dirEl.textContent = dev >= 0 ? "PREMIUM TO REFERENCE" : "DISCOUNT TO REFERENCE";
+      }
+    }
+
+    // The detail rail uses the same domain as the field; when the overview
+    // has not been loaded this session, fall back to this asset alone.
+    if (dev !== null && domainMax === FLOOR) domainMax = computeDomain([dev]);
+    renderDetailRail(dev);
+
     document.getElementById("detail-reference").textContent = fieldOrDash(detail.referencePrice, fmtPrice);
     document.getElementById("detail-secondary").textContent = fieldOrDash(detail.secondaryPrice, fmtPrice);
-    document.getElementById("detail-premium").innerHTML = detail.premiumDiscountPct && detail.premiumDiscountPct.value !== null ? fmtPct(detail.premiumDiscountPct.value) : "—";
-    document.getElementById("detail-intelligence").textContent = detail.intelligence ? detail.intelligence.label : "—";
 
     const rhPrice = detail.robinhoodPrice && detail.robinhoodPrice.value;
     document.getElementById("detail-rh-price").textContent = rhPrice
-      ? `bid ${rhPrice.bid} / ask ${rhPrice.ask}${rhPrice.isTradingHalt ? " (TRADING HALT)" : ""}`
+      ? `bid ${rhPrice.bid} / ask ${rhPrice.ask}${rhPrice.isTradingHalt ? " \u00b7 TRADING HALT" : ""}`
       : "unavailable";
-
-    const oracle = detail.oraclePausedField;
-    document.getElementById("detail-oracle").textContent = oracle && oracle.value !== null
-      ? (oracle.value ? "PAUSED" : "active")
-      : "unavailable";
-
-    document.getElementById("detail-asset-status").textContent = fieldOrDash(detail.robinhoodAssetStatus);
-    document.getElementById("detail-token-address").textContent = detail.canonicalTokenAddress || "—";
-    document.getElementById("detail-pool-address").textContent = detail.configuredPoolAddress || "—";
-
-    const hc = detail.holderConcentration || {};
-    document.getElementById("detail-top1").textContent = hc.top1Pct !== null && hc.top1Pct !== undefined ? `${hc.top1Pct.toFixed(2)}%` : "unavailable";
-    document.getElementById("detail-top5").textContent = hc.top5Pct !== null && hc.top5Pct !== undefined ? `${hc.top5Pct.toFixed(2)}%` : "unavailable";
-    document.getElementById("detail-top10").textContent = hc.top10Pct !== null && hc.top10Pct !== undefined ? `${hc.top10Pct.toFixed(2)}%` : "unavailable";
-
     document.getElementById("detail-last-update").textContent = fmtTimestamp(detail.lastUpdateTimestamp);
 
+    // ── B. intelligence ──
+    renderIntelligenceBay(detail.intelligenceDetail);
+
+    // ── D. diagnostics ──
+    const oracle = detail.oraclePausedField;
+    const oracleEl = document.getElementById("detail-oracle");
+    if (oracle && oracle.value !== null && oracle.value !== undefined) {
+      oracleEl.className = "diag-v";
+      oracleEl.textContent = oracle.value ? "PAUSED" : "ACTIVE";
+    } else {
+      oracleEl.className = "diag-v na";
+      oracleEl.textContent = "unavailable";
+    }
+
+    const asEl = document.getElementById("detail-asset-status");
+    const asVal = detail.robinhoodAssetStatus && detail.robinhoodAssetStatus.value;
+    if (asVal) {
+      // Long composite status string: show the leading token, keep the full
+      // value verbatim in the title attribute.
+      asEl.className = "diag-v addr";
+      asEl.textContent = String(asVal).split(" ")[0];
+      asEl.title = String(asVal);
+    } else {
+      asEl.className = "diag-v na";
+      asEl.textContent = "unavailable";
+      asEl.removeAttribute("title");
+    }
+
+    const addr = (id, value) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (value) {
+        el.className = "diag-v addr";
+        el.textContent = `${value.slice(0, 10)}\u2026${value.slice(-8)}`;
+        el.title = value;
+      } else {
+        el.className = "diag-v na";
+        el.textContent = "unavailable";
+        el.removeAttribute("title");
+      }
+    };
+    addr("detail-token-address", detail.canonicalTokenAddress);
+    addr("detail-pool-address", detail.configuredPoolAddress);
+
+    const hc = detail.holderConcentration || {};
+    const holder = (id, v) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (typeof v === "number" && Number.isFinite(v)) {
+        el.className = "diag-v";
+        el.textContent = `${v.toFixed(2)}%`;
+      } else {
+        el.className = "diag-v na";
+        el.textContent = "unavailable";
+      }
+    };
+    holder("detail-top1", hc.top1Pct);
+    holder("detail-top5", hc.top5Pct);
+    holder("detail-top10", hc.top10Pct);
+
+    // ── E. source health ──
     renderProvenanceTable(detail.provenance || []);
 
     currentHistory = history;
@@ -447,30 +639,75 @@ function renderDetailNotFound(symbol, err) {
   if (err) console.error(err);
 }
 
+/**
+ * Source health (E). Replaces the cramped provenance table.
+ *
+ * Truthfulness rules:
+ *   · No backend diagnostic is reworded into a claim the contract does not
+ *     support (e.g. never "source unreachable" — the backend does not say
+ *     that). The summary states only what is certain: the field is
+ *     unavailable.
+ *   · The raw diagnostic string is preserved VERBATIM behind a <details>
+ *     disclosure, selectable, never parsed or truncated in content.
+ *   · No green. Healthy uses cyan; degraded uses violet; absent uses a
+ *     dashed neutral marker.
+ */
 function renderProvenanceTable(rows) {
-  const tbody = document.getElementById("provenance-table-body");
-  tbody.innerHTML = "";
-  for (const row of rows) {
-    const tr = document.createElement("tr");
-    const tdField = document.createElement("td");
-    tdField.textContent = row.field;
-    tdField.style.fontFamily = "var(--sans)";
-    const tdStatus = document.createElement("td");
-    tdStatus.appendChild(badge(row.status === "ok" ? "healthy_current" : row.status));
-    const tdSource = document.createElement("td");
-    tdSource.textContent = row.source || "—";
-    const tdDetail = document.createElement("td");
-    tdDetail.textContent = row.detail || "—";
-    tdDetail.className = "small muted";
-    tr.append(tdField, tdStatus, tdSource, tdDetail);
-    tbody.appendChild(tr);
-  }
-}
+  const host = document.getElementById("provenance-table-body");
+  if (!host) return;
+  host.textContent = "";
 
-// ---------------------------------------------------------------------
-// History chart — hand-rolled SVG, gap-preserving (no interpolation,
-// no fabricated zeros; a null value breaks the line into a new segment).
-// ---------------------------------------------------------------------
+  let healthy = 0;
+  for (const row of rows) {
+    const ok = row.status === "ok";
+    if (ok) healthy++;
+
+    const wrap = document.createElement("div");
+    wrap.className = "hrow";
+
+    const dot = document.createElement("span");
+    dot.className = "hdot " + (ok ? "ok" : row.detail ? "out" : "warn");
+    dot.setAttribute("aria-hidden", "true");
+
+    const name = document.createElement("span");
+    name.className = "hname";
+    name.textContent = row.field;
+
+    const src = document.createElement("span");
+    src.className = "hsrc";
+    src.textContent = row.source || "";
+    src.title = row.source || "";
+
+    wrap.append(dot, name, src);
+    host.appendChild(wrap);
+
+    if (!ok) {
+      const state = document.createElement("div");
+      state.className = "hrow";
+      const spacer = document.createElement("span");
+      const label = document.createElement("span");
+      label.className = "hstate";
+      // Summary states only what the contract supports.
+      label.textContent = `${row.field.toUpperCase()} UNAVAILABLE`;
+      state.append(spacer, label);
+      host.appendChild(state);
+
+      if (row.detail) {
+        const det = document.createElement("details");
+        det.className = "hdiag";
+        const sum = document.createElement("summary");
+        sum.textContent = "RAW DIAGNOSTIC";
+        const pre = document.createElement("pre");
+        // Verbatim. textContent, so the string is never interpreted.
+        pre.textContent = row.detail;
+        det.append(sum, pre);
+        host.appendChild(det);
+      }
+    }
+  }
+
+  setText("health-summary", `${healthy} of ${rows.length} sources reporting`);
+}
 
 function renderChart(history, seriesKey) {
   const svg = document.getElementById("history-chart");
