@@ -1,0 +1,307 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark">
+<title>Parity · NEON // INSTRUMENT — Refined</title>
+<style>
+/* PARITY — NEON // INSTRUMENT (refined).  Art-direction study. MOCK DATA.
+   Palette: cyan / violet / magenta / indigo on violet-black. NO GREEN.
+   Colour encodes DIRECTION ONLY (which side of parity) — never risk.
+   Risk classification (NORMAL/ELEVATED/DISLOCATED/SEVERE) is deliberately
+   left undesigned here so it can receive its own semantic treatment. */
+*{box-sizing:border-box}
+:root{
+  --void:#03030a; --glass:rgba(22,16,48,.52);
+  --cy:#22e0ff; --cy2:#7ff0ff; --vi:#8b5cff; --mg:#ff3fb4; --mg2:#ff8ad4;
+  --tx:#f2eeff; --t2:#a99bd0; --t3:#756796; --t4:#4e4470; --t5:#372f52;
+  --hair:rgba(139,92,255,.20); --hairc:rgba(34,224,255,.24); --hairm:rgba(255,63,180,.24);
+  --mono:ui-monospace,"SF Mono",Menlo,monospace; --sans:ui-sans-serif,-apple-system,"Segoe UI",Inter,sans-serif;
+  --micro:600 9px/1 var(--mono);
+  --bay-pad:22px;
+}
+html,body{margin:0;background:var(--void);color:var(--tx);font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+   radial-gradient(ellipse 46% 38% at 50% 24%,rgba(139,92,255,.24),transparent 64%),
+   radial-gradient(ellipse 38% 32% at 8% 72%,rgba(255,63,180,.13),transparent 60%),
+   radial-gradient(ellipse 42% 36% at 92% 60%,rgba(34,224,255,.14),transparent 60%),
+   radial-gradient(ellipse 70% 46% at 50% 100%,rgba(10,8,32,.92),transparent 72%)}
+body::after{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.28;
+  background-image:repeating-linear-gradient(180deg,rgba(255,255,255,.04) 0 1px,transparent 1px 3px)}
+.wrap{max-width:1400px;margin:0 auto;padding:0 44px;position:relative;z-index:1}
+.micro{font:var(--micro);letter-spacing:.26em;text-transform:uppercase;color:var(--t3)}
+
+/* ── HEADER ─────────────────────────────────────── */
+header{border-bottom:1px solid var(--hair);position:relative;z-index:1;
+  background:linear-gradient(180deg,rgba(139,92,255,.09),transparent)}
+.hd{display:flex;align-items:center;justify-content:space-between;padding:22px 0}
+.brand{display:flex;align-items:center;gap:18px}
+.mk{width:28px;height:34px;position:relative}
+.mk::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;border-radius:2px;
+  background:linear-gradient(180deg,transparent,var(--mg) 14%,var(--cy) 50%,var(--vi) 86%,transparent);
+  box-shadow:0 0 20px var(--cy),0 0 42px rgba(139,92,255,.55)}
+.bn{font-size:22px;font-weight:700;letter-spacing:.32em;
+  background:linear-gradient(90deg,var(--cy),#fff 48%,var(--mg));-webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;filter:drop-shadow(0 0 16px rgba(34,224,255,.4))}
+.bd{font-size:12px;color:var(--t3);padding-left:18px;border-left:1px solid var(--hair)}
+.pills{display:flex;gap:9px}
+.pill{padding:6px 13px;border-radius:999px;border:1px solid var(--hairc);background:var(--glass);
+  backdrop-filter:blur(12px);font:var(--micro);letter-spacing:.16em;color:var(--cy);
+  box-shadow:0 0 16px rgba(34,224,255,.10),inset 0 0 16px rgba(34,224,255,.05)}
+.pill.v{border-color:var(--hair);color:var(--vi)}
+.ldot{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--cy);margin-right:7px;
+  box-shadow:0 0 9px var(--cy);animation:bl 3.4s ease-in-out infinite}
+@keyframes bl{0%,100%{opacity:1}50%{opacity:.32}}
+
+/* ── PRIMARY EQUILIBRIUM FIELD (unchanged chassis) ─ */
+.field{padding:56px 0 34px;position:relative;z-index:1}
+.fhd{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:18px}
+.zero{text-align:center}
+.zv{font-size:88px;font-weight:200;line-height:1;letter-spacing:-.055em;color:#fff;
+  text-shadow:0 0 26px var(--cy),0 0 66px rgba(34,224,255,.5),0 0 120px rgba(139,92,255,.42)}
+.zl{font:var(--micro);font-size:10px;letter-spacing:.6em;color:var(--cy);margin-top:12px;padding-left:.6em;
+  text-shadow:0 0 14px var(--cy)}
+.rail{position:relative;height:262px;margin-top:20px}
+.beam{position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;border-radius:2px;
+  background:linear-gradient(180deg,transparent,var(--cy) 12%,#fff 50%,var(--cy) 88%,transparent)}
+/* expensive instrumentation breathing — 7s, barely perceptible */
+.beam::after{content:"";position:absolute;left:-10px;right:-10px;top:0;bottom:0;background:var(--cy);
+  filter:blur(17px);opacity:.5;animation:breathe 7s ease-in-out infinite}
+@keyframes breathe{0%,100%{opacity:.44}50%{opacity:.60}}
+.axis{position:absolute;left:0;right:0;top:128px;height:1px;opacity:.55;
+  background:linear-gradient(90deg,transparent,var(--mg) 6%,var(--vi) 30%,var(--cy) 50%,var(--vi) 70%,var(--mg) 94%,transparent);
+  box-shadow:0 0 13px rgba(139,92,255,.45)}
+.tick{position:absolute;top:122px;width:1px;height:13px;background:var(--hairc);transform:translateX(-.5px)}
+.tkm{position:absolute;top:125px;width:1px;height:7px;background:var(--hair);transform:translateX(-.5px)}
+.tkl{position:absolute;top:142px;transform:translateX(-50%);font:var(--micro);font-size:9px;color:var(--t4);letter-spacing:.08em}
+.pole{position:absolute;top:101px;font:var(--micro);font-size:10px;letter-spacing:.28em}
+.pole.l{left:0;color:var(--mg);text-shadow:0 0 13px rgba(255,63,180,.55)}
+.pole.r{right:0;color:var(--cy);text-shadow:0 0 13px rgba(34,224,255,.55)}
+.ast{position:absolute;top:0;bottom:0;width:0;opacity:0;
+  transition:left 1250ms cubic-bezier(.16,1,.3,1),opacity 900ms ease}
+.mkr{position:absolute;top:128px;left:0;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:#fff}
+.mkr.p{box-shadow:0 0 11px var(--cy),0 0 28px var(--cy),0 0 56px rgba(34,224,255,.55)}
+.mkr.d{box-shadow:0 0 11px var(--mg),0 0 28px var(--mg),0 0 56px rgba(255,63,180,.55)}
+.halo{position:absolute;top:128px;left:0;width:36px;height:36px;margin:-18px 0 0 -18px;border-radius:50%;
+  animation:sp 5s ease-out infinite}
+.halo.p{border:1px solid rgba(34,224,255,.34)}.halo.d{border:1px solid rgba(255,63,180,.34)}
+@keyframes sp{0%{transform:scale(.65);opacity:.7}100%{transform:scale(1.5);opacity:0}}
+.stem{position:absolute;left:0;width:1px;background:linear-gradient(rgba(139,92,255,.55),transparent)}
+.card{position:absolute;left:0;transform:translateX(-50%);white-space:nowrap;text-align:center;
+  padding:10px 16px;border-radius:10px;border:1px solid var(--hair);background:var(--glass);
+  backdrop-filter:blur(16px);box-shadow:0 8px 32px rgba(0,0,0,.62),inset 0 1px 0 rgba(255,255,255,.08)}
+.ct{font-size:12.5px;font-weight:700;letter-spacing:.14em;color:#fff}
+.cv{font-family:var(--mono);font-size:17px;margin-top:4px;letter-spacing:-.025em;font-weight:500}
+.cv.p{color:var(--cy2);text-shadow:0 0 15px rgba(34,224,255,.6)}
+.cv.d{color:var(--mg2);text-shadow:0 0 15px rgba(255,63,180,.6)}
+.fnote{display:flex;justify-content:space-between;font:var(--micro);letter-spacing:.18em;color:var(--t4);margin-top:20px}
+
+/* ── DESCENT: field → channels.  Makes the deck read as
+      readouts OF the instrument above, not a separate section. ── */
+.descent{position:relative;height:54px;z-index:1}
+.descent i{position:absolute;left:50%;top:0;bottom:14px;width:1px;margin-left:-.5px;
+  background:linear-gradient(180deg,var(--cy),rgba(34,224,255,0));opacity:.5}
+.descent b{position:absolute;left:50%;bottom:6px;width:7px;height:7px;margin-left:-3.5px;
+  border-left:1px solid var(--hairc);border-bottom:1px solid var(--hairc);transform:rotate(-45deg)}
+
+/* ── INSTRUMENTATION CONSOLE — six channels of one machine ── */
+.deck{padding:0 0 92px;position:relative;z-index:1}
+.dhd{display:flex;justify-content:space-between;align-items:baseline;padding-bottom:13px;
+  border-bottom:1px solid var(--hair)}
+.bays{display:grid;grid-template-columns:repeat(6,1fr);position:relative;margin-top:0}
+/* ambient light crossing behind all channels — binds them optically */
+.bays::after{content:"";position:absolute;left:0;right:0;top:150px;height:120px;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse 52% 100% at 50% 50%,rgba(139,92,255,.13),transparent 72%)}
+.bay{position:relative;z-index:1;padding:26px var(--bay-pad) 24px;display:flex;flex-direction:column;
+  opacity:0;transform:translateY(12px);
+  transition:opacity 760ms ease,transform 760ms cubic-bezier(.16,1,.3,1),background 280ms}
+.bay:hover{background:linear-gradient(180deg,rgba(139,92,255,.085),transparent 76%)}
+/* weak PARTIAL separator — not a full-height card border */
+.bay+.bay::before{content:"";position:absolute;left:0;top:40px;bottom:40px;width:1px;
+  background:linear-gradient(180deg,transparent,var(--hair) 18%,var(--hair) 82%,transparent)}
+/* top registration tick — channel index marker */
+.bay::after{content:"";position:absolute;top:0;left:var(--bay-pad);width:11px;height:1px;background:var(--hairc);opacity:.7}
+
+.bhead{height:128px}
+.bsym{font-size:16px;font-weight:700;letter-spacing:.15em;color:#fff}
+.bname{font:var(--micro);font-size:8.5px;letter-spacing:.2em;color:var(--t4);margin-top:5px}
+.bval{font-family:var(--mono);font-size:23px;font-weight:500;letter-spacing:-.035em;margin-top:18px;line-height:1}
+.bval.p{color:var(--cy2);text-shadow:0 0 18px rgba(34,224,255,.5)}
+.bval.d{color:var(--mg2);text-shadow:0 0 18px rgba(255,63,180,.5)}
+.bdir{font:var(--micro);font-size:8px;letter-spacing:.22em;margin-top:8px}
+.bdir.p{color:var(--cy)}.bdir.d{color:var(--mg)}
+
+/* ═══ MINIATURE EQUILIBRIUM INSTRUMENT ═══
+   Origin = 0.00% parity. A beam measures out from origin to the true
+   deviation endpoint. Same signed-log scale as the field above. */
+.chan{position:relative;height:46px;margin-top:2px}
+/* shared datum — bleeds past the bay edges so all six join into ONE rail */
+.chan .datum{position:absolute;left:calc(-1 * var(--bay-pad) - 1px);right:calc(-1 * var(--bay-pad));
+  top:23px;height:1px;background:rgba(255,255,255,.085)}
+.chan .grad{position:absolute;top:19px;width:1px;height:9px;background:rgba(255,255,255,.11);transform:translateX(-.5px)}
+/* the parity origin: the one cyan landmark in every channel */
+.chan .origin{position:absolute;left:50%;top:11px;width:1px;height:25px;margin-left:-.5px;background:var(--cy);
+  box-shadow:0 0 9px var(--cy);opacity:.9}
+.chan .olabel{position:absolute;left:50%;top:38px;transform:translateX(-50%);font:var(--micro);
+  font-size:7px;letter-spacing:.14em;color:var(--t5)}
+/* measurement beam out of origin */
+.chan .beamx{position:absolute;top:22px;height:2px;width:0;border-radius:2px;
+  transition:width 1150ms cubic-bezier(.16,1,.3,1)}
+.chan .beamx.p{left:50%;background:linear-gradient(90deg,rgba(34,224,255,.30),var(--cy))}
+.chan .beamx.d{right:50%;background:linear-gradient(270deg,rgba(255,63,180,.30),var(--mg))}
+/* endpoint: measured deviation, with a small precision bracket */
+.chan .end{position:absolute;top:23px;left:50%;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;
+  transition:left 1150ms cubic-bezier(.16,1,.3,1)}
+.chan .end.p{background:var(--cy2);box-shadow:0 0 10px var(--cy),0 0 22px rgba(34,224,255,.55)}
+.chan .end.d{background:var(--mg2);box-shadow:0 0 10px var(--mg),0 0 22px rgba(255,63,180,.55)}
+.chan .brk{position:absolute;top:23px;left:50%;width:13px;height:15px;margin:-7.5px 0 0 -6.5px;
+  transition:left 1150ms cubic-bezier(.16,1,.3,1);opacity:.55}
+.chan .brk::before,.chan .brk::after{content:"";position:absolute;width:4px;height:100%}
+.chan .brk::before{left:0;border-left:1px solid currentColor;border-top:1px solid currentColor;border-bottom:1px solid currentColor}
+.chan .brk::after{right:0;border-right:1px solid currentColor;border-top:1px solid currentColor;border-bottom:1px solid currentColor}
+.chan .brk.p{color:var(--cy)}.chan .brk.d{color:var(--mg)}
+
+/* telemetry */
+.tele{margin-top:16px}
+.brow{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--mono);
+  font-size:11px;color:var(--t2);padding:5px 0;letter-spacing:-.01em}
+.brow+.brow{border-top:1px solid rgba(139,92,255,.10)}
+.brow span:first-child{color:var(--t4);letter-spacing:.16em;font-size:8px;text-transform:uppercase;font-weight:600}
+
+/* baseline intelligence — tertiary */
+.bbase{margin-top:auto;padding-top:18px}
+.bbl{font:var(--micro);font-size:8px;letter-spacing:.2em;color:var(--vi)}
+.segs{display:flex;gap:2px;margin-top:8px}
+.segs i{flex:1;height:3px;background:rgba(139,92,255,.16);border-radius:1px;
+  transition:background 420ms ease,box-shadow 420ms ease}
+.segs i.on{background:var(--vi);box-shadow:0 0 7px rgba(139,92,255,.8)}
+.bobs{font:var(--micro);font-size:8.5px;letter-spacing:.16em;color:var(--t4);margin-top:9px}
+.mock{position:fixed;bottom:0;left:0;right:0;text-align:center;font:var(--micro);font-size:9px;letter-spacing:.22em;
+  color:var(--t4);background:rgba(3,3,10,.95);padding:7px;border-top:1px solid var(--hair);z-index:9}
+@media(max-width:1180px){.bays{grid-template-columns:repeat(3,1fr)}
+  .bay:nth-child(3n+1)::before{display:none}}
+@media(max-width:760px){.wrap{padding:0 20px}.zv{font-size:52px}.rail{height:300px}.bd,.pills{display:none}
+  .bays{grid-template-columns:repeat(2,1fr)}.bay:nth-child(3n+1)::before{display:block}
+  .bay:nth-child(2n+1)::before{display:none}.bhead{height:auto;margin-bottom:16px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style></head><body>
+
+<header><div class="wrap hd">
+  <div class="brand"><span class="mk"></span><span class="bn">PARITY</span>
+    <span class="bd">Risk intelligence for tokenized stocks</span></div>
+  <div class="pills"><span class="pill"><span class="ldot"></span>FIELD ACTIVE</span>
+    <span class="pill v">6 CHANNELS</span><span class="pill">16:45:03Z</span></div>
+</div></header>
+
+<section class="field"><div class="wrap">
+  <div class="fhd"><span class="micro">Primary equilibrium field</span><span class="micro" id="dm"></span></div>
+  <div class="zero"><div class="zv">0.00%</div><div class="zl">PARITY</div></div>
+  <div class="rail" id="rail">
+    <div class="axis"></div><div class="beam"></div>
+    <div class="pole l">◄ DISCOUNT</div><div class="pole r">PREMIUM ►</div>
+  </div>
+  <div class="fnote"><span>SYMMETRIC LOG SCALE · ZERO CENTRED · POSITION ENCODES TRUE DEVIATION</span>
+    <span>COLOUR ENCODES DIRECTION, NOT RISK</span></div>
+</div></section>
+
+<div class="wrap descent"><i></i><b></b></div>
+
+<section class="deck"><div class="wrap">
+  <div class="dhd"><span class="micro">Channel readouts · origin = 0.00% parity</span>
+    <span class="micro">Baseline learning</span></div>
+  <div class="bays" id="bays"></div>
+</div></section>
+
+<div class="mock">◆ DESIGN MOCK DATA · PARITY — NEON // INSTRUMENT (REFINED) · NOT PRODUCTION VALUES ◆</div>
+
+<script>
+/* MOCK DATA — art-direction study only. */
+const D=[{s:'AAPL',n:'APPLE',v:-0.3049,r:326.41,c:325.41,o:152},
+{s:'GOOGL',n:'ALPHABET',v:0.2512,r:337.57,c:338.42,o:152},
+{s:'USO',n:'US OIL FUND',v:0.0531,r:143.80,c:143.88,o:149},
+{s:'SPCX',n:'SPACEX',v:0.1744,r:147.96,c:148.22,o:151},
+{s:'TSLA',n:'TESLA',v:0.0412,r:353.98,c:354.13,o:152},
+{s:'NVDA',n:'NVIDIA',v:0.9865,r:230.24,c:232.51,o:146}];
+
+/* ── Truthful scale, shared by the field AND every channel ──
+   symmetric signed-log · zero centred · domain floor · no exaggeration */
+const K=.05,FLOOR=.5,SPAN=42,CH_SPAN=40;
+const dmax=Math.max(FLOOR,Math.max(...D.map(d=>Math.abs(d.v)))*1.15);
+const t=v=>Math.sign(v)*Math.log10(1+Math.abs(v)/K)/Math.log10(1+dmax/K);
+const pct=v=>50+t(v)*SPAN;                 /* field position  */
+const chPct=v=>50+t(v)*CH_SPAN;            /* channel position */
+const fmt=(v,d=2)=>(v>0?'+':v<0?'\u2212':'')+Math.abs(v).toFixed(d)+'%';
+dm.textContent='FIELD \u00b1'+dmax.toFixed(2)+'%';
+
+/* field graduations */
+[.05,.1,.25,.5,1].filter(v=>v<=dmax).forEach(v=>[v,-v].forEach(sv=>{
+  const x=pct(sv);
+  rail.insertAdjacentHTML('beforeend','<div class="tick" style="left:'+x+'%"></div>'+
+    '<div class="tkl" style="left:'+x+'%">'+fmt(sv,sv%1===0?0:2)+'</div>');
+}));
+[.02,.07,.15,.35,.75].filter(v=>v<=dmax).forEach(v=>[v,-v].forEach(sv=>{
+  rail.insertAdjacentHTML('beforeend','<div class="tkm" style="left:'+pct(sv)+'%"></div>');
+}));
+
+/* field markers — settle outward from parity; x is never altered for collisions */
+const lanes=[[-1,64],[1,64],[-1,118],[1,118],[-1,172]],occ={};
+[...D].sort((a,b)=>a.v-b.v).forEach((d,i)=>{
+  const x=pct(d.v);let pick=lanes[lanes.length-1];
+  for(const L of lanes){const k=L.join(':');if((occ[k]||[]).every(u=>Math.abs(u-x)>8.5)){pick=L;break}}
+  const k=pick.join(':');(occ[k]=occ[k]||[]).push(x);
+  const up=pick[0]<0,off=pick[1],lane=128+pick[0]*off,dir=d.v>=0?'p':'d';
+  const el=document.createElement('div');el.className='ast';el.style.left='50%';
+  el.innerHTML='<div class="halo '+dir+'"></div><div class="mkr '+dir+'"></div>'+
+   '<div class="stem" style="top:'+(up?lane:128)+'px;height:'+(off-18)+'px"></div>'+
+   '<div class="card" style="'+(up?'bottom:'+(262-lane+10)+'px':'top:'+(lane+12)+'px')+'">'+
+   '<div class="ct">'+d.s+'</div><div class="cv '+dir+'">'+fmt(d.v,4)+'</div></div>';
+  rail.appendChild(el);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>setTimeout(()=>{
+    el.style.left=x+'%';el.style.opacity='1'},i*85)));
+});
+
+/* ── six channel readouts ── */
+bays.innerHTML=D.map(d=>{
+  const dir=d.v>=0?'p':'d', seg=Math.max(1,Math.round(d.o/200*10));
+  const reach=Math.abs(t(d.v))*CH_SPAN;      /* half-width % out of origin */
+  const grads=[.1,.25,.5].filter(v=>v<=dmax)
+    .map(v=>[v,-v].map(sv=>'<span class="grad" style="left:'+chPct(sv)+'%"></span>').join('')).join('');
+  return '<div class="bay">'+
+   '<div class="bhead">'+
+     '<div class="bsym">'+d.s+'</div><div class="bname">'+d.n+'</div>'+
+     '<div class="bval '+dir+'">'+fmt(d.v,4)+'</div>'+
+     '<div class="bdir '+dir+'">'+(d.v>=0?'PREMIUM':'DISCOUNT')+'</div>'+
+   '</div>'+
+   '<div class="chan"><span class="datum"></span>'+grads+
+     '<span class="origin"></span><span class="olabel">PARITY</span>'+
+     '<span class="beamx '+dir+'" data-w="'+reach+'"></span>'+
+     '<span class="brk '+dir+'" data-x="'+chPct(d.v)+'"></span>'+
+     '<span class="end '+dir+'" data-x="'+chPct(d.v)+'"></span>'+
+   '</div>'+
+   '<div class="tele">'+
+     '<div class="brow"><span>REF</span><span>'+d.r.toFixed(2)+'</span></div>'+
+     '<div class="brow"><span>CHAIN</span><span>'+d.c.toFixed(2)+'</span></div>'+
+   '</div>'+
+   '<div class="bbase"><div class="bbl">BASELINE LEARNING</div>'+
+     '<div class="segs">'+Array.from({length:10},(_,j)=>'<i data-on="'+(j<seg?1:0)+'"></i>').join('')+'</div>'+
+     '<div class="bobs">'+d.o+' OBSERVATIONS</div></div>'+
+  '</div>';
+}).join('');
+
+/* Instrumentation waking up: channels power on, beams measure outward from
+   origin, then baseline segments illuminate progressively. */
+requestAnimationFrame(()=>requestAnimationFrame(()=>{
+  document.querySelectorAll('.bay').forEach((b,i)=>{
+    const base=360+i*100;
+    setTimeout(()=>{b.style.opacity='1';b.style.transform='translateY(0)'},base);
+    setTimeout(()=>{
+      const bm=b.querySelector('.beamx'),e=b.querySelector('.end'),k=b.querySelector('.brk');
+      if(bm)bm.style.width=bm.dataset.w+'%';
+      if(e)e.style.left=e.dataset.x+'%';
+      if(k)k.style.left=k.dataset.x+'%';
+    },base+180);
+    b.querySelectorAll('.segs i').forEach((s,j)=>{
+      if(s.dataset.on==='1')setTimeout(()=>s.classList.add('on'),base+520+j*42);
+    });
+  });
+}));
+</script></body></html>
