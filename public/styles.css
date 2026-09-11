@@ -1,182 +1,268 @@
-:root {
-  --bg: #0b0e14;
-  --bg-panel: #11151d;
-  --bg-panel-alt: #151a24;
-  --border: #232936;
-  --text: #e6e9ef;
-  --text-muted: #8b93a3;
-  --accent: #5fb0ff;
-  --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 
-  --green: #3ecf8e;
-  --green-bg: rgba(62, 207, 142, 0.12);
-  --amber: #e8b34a;
-  --amber-bg: rgba(232, 179, 74, 0.12);
-  --red: #e8615a;
-  --red-bg: rgba(232, 97, 90, 0.12);
-  --gray: #8b93a3;
-  --gray-bg: rgba(139, 147, 163, 0.12);
+/* PARITY — NEON // INSTRUMENT
+   Production visual system. Ported verbatim from the locked visual
+   specification (concepts/final-neon-refined.html, sha256 513cce6f…dc83).
+   Palette: cyan / violet / magenta / indigo on violet-black. NO GREEN.
+   Colour encodes DIRECTION ONLY (which side of parity) — never risk.
+   Risk classification (NORMAL/ELEVATED/DISLOCATED/SEVERE) is deliberately
+   left undesigned here so it can receive its own semantic treatment. */
+*{box-sizing:border-box}
+:root{
+  --void:#03030a; --glass:rgba(22,16,48,.52);
+  --cy:#22e0ff; --cy2:#7ff0ff; --vi:#8b5cff; --mg:#ff3fb4; --mg2:#ff8ad4;
+  --tx:#f2eeff; --t2:#a99bd0; --t3:#756796; --t4:#4e4470; --t5:#372f52;
+  --hair:rgba(139,92,255,.20); --hairc:rgba(34,224,255,.24); --hairm:rgba(255,63,180,.24);
+  --mono:ui-monospace,"SF Mono",Menlo,monospace; --sans:ui-sans-serif,-apple-system,"Segoe UI",Inter,sans-serif;
+  --micro:600 9px/1 var(--mono);
+  --bay-pad:22px;
 }
+html,body{margin:0;background:var(--void);color:var(--tx);font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+   radial-gradient(ellipse 46% 38% at 50% 24%,rgba(139,92,255,.24),transparent 64%),
+   radial-gradient(ellipse 38% 32% at 8% 72%,rgba(255,63,180,.13),transparent 60%),
+   radial-gradient(ellipse 42% 36% at 92% 60%,rgba(34,224,255,.14),transparent 60%),
+   radial-gradient(ellipse 70% 46% at 50% 100%,rgba(10,8,32,.92),transparent 72%)}
+body::after{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.28;
+  background-image:repeating-linear-gradient(180deg,rgba(255,255,255,.04) 0 1px,transparent 1px 3px)}
+.wrap{max-width:1400px;margin:0 auto;padding:0 44px;position:relative;z-index:1}
+.micro{font:var(--micro);letter-spacing:.26em;text-transform:uppercase;color:var(--t3)}
 
-* { box-sizing: border-box; }
+/* ── HEADER ─────────────────────────────────────── */
+header{border-bottom:1px solid var(--hair);position:relative;z-index:1;
+  background:linear-gradient(180deg,rgba(139,92,255,.09),transparent)}
+.hd{display:flex;align-items:center;justify-content:space-between;padding:22px 0}
+.brand{display:flex;align-items:center;gap:18px}
+.mk{width:28px;height:34px;position:relative}
+.mk::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;border-radius:2px;
+  background:linear-gradient(180deg,transparent,var(--mg) 14%,var(--cy) 50%,var(--vi) 86%,transparent);
+  box-shadow:0 0 20px var(--cy),0 0 42px rgba(139,92,255,.55)}
+.bn{font-size:22px;font-weight:700;letter-spacing:.32em;
+  background:linear-gradient(90deg,var(--cy),#fff 48%,var(--mg));-webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;filter:drop-shadow(0 0 16px rgba(34,224,255,.4))}
+.bd{font-size:12px;color:var(--t3);padding-left:18px;border-left:1px solid var(--hair)}
+.pills{display:flex;gap:9px}
+.pill{padding:6px 13px;border-radius:999px;border:1px solid var(--hairc);background:var(--glass);
+  backdrop-filter:blur(12px);font:var(--micro);letter-spacing:.16em;color:var(--cy);
+  box-shadow:0 0 16px rgba(34,224,255,.10),inset 0 0 16px rgba(34,224,255,.05)}
+.pill.v{border-color:var(--hair);color:var(--vi)}
+.ldot{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--cy);margin-right:7px;
+  box-shadow:0 0 9px var(--cy);animation:bl 3.4s ease-in-out infinite}
+@keyframes bl{0%,100%{opacity:1}50%{opacity:.32}}
 
-html, body {
-  margin: 0;
-  padding: 0;
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--sans);
-  font-size: 14px;
-}
+/* ── PRIMARY EQUILIBRIUM FIELD (unchanged chassis) ─ */
+.field{padding:56px 0 34px;position:relative;z-index:1}
+.fhd{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:18px}
+.zero{text-align:center}
+.zv{font-size:88px;font-weight:200;line-height:1;letter-spacing:-.055em;color:#fff;
+  text-shadow:0 0 26px var(--cy),0 0 66px rgba(34,224,255,.5),0 0 120px rgba(139,92,255,.42)}
+.zl{font:var(--micro);font-size:10px;letter-spacing:.6em;color:var(--cy);margin-top:12px;padding-left:.6em;
+  text-shadow:0 0 14px var(--cy)}
+.rail{position:relative;height:262px;margin-top:20px}
+.beam{position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;border-radius:2px;
+  background:linear-gradient(180deg,transparent,var(--cy) 12%,#fff 50%,var(--cy) 88%,transparent)}
+/* expensive instrumentation breathing — 7s, barely perceptible */
+.beam::after{content:"";position:absolute;left:-10px;right:-10px;top:0;bottom:0;background:var(--cy);
+  filter:blur(17px);opacity:.5;animation:breathe 7s ease-in-out infinite}
+@keyframes breathe{0%,100%{opacity:.44}50%{opacity:.60}}
+.axis{position:absolute;left:0;right:0;top:128px;height:1px;opacity:.55;
+  background:linear-gradient(90deg,transparent,var(--mg) 6%,var(--vi) 30%,var(--cy) 50%,var(--vi) 70%,var(--mg) 94%,transparent);
+  box-shadow:0 0 13px rgba(139,92,255,.45)}
+.tick{position:absolute;top:122px;width:1px;height:13px;background:var(--hairc);transform:translateX(-.5px)}
+.tkm{position:absolute;top:125px;width:1px;height:7px;background:var(--hair);transform:translateX(-.5px)}
+.tkl{position:absolute;top:142px;transform:translateX(-50%);font:var(--micro);font-size:9px;color:var(--t4);letter-spacing:.08em}
+.pole{position:absolute;top:101px;font:var(--micro);font-size:10px;letter-spacing:.28em}
+.pole.l{left:0;color:var(--mg);text-shadow:0 0 13px rgba(255,63,180,.55)}
+.pole.r{right:0;color:var(--cy);text-shadow:0 0 13px rgba(34,224,255,.55)}
+.ast{position:absolute;top:0;bottom:0;width:0;opacity:0;
+  transition:left 1250ms cubic-bezier(.16,1,.3,1),opacity 900ms ease}
+.mkr{position:absolute;top:128px;left:0;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:#fff}
+.mkr.p{box-shadow:0 0 11px var(--cy),0 0 28px var(--cy),0 0 56px rgba(34,224,255,.55)}
+.mkr.d{box-shadow:0 0 11px var(--mg),0 0 28px var(--mg),0 0 56px rgba(255,63,180,.55)}
+.halo{position:absolute;top:128px;left:0;width:36px;height:36px;margin:-18px 0 0 -18px;border-radius:50%;
+  animation:sp 5s ease-out infinite}
+.halo.p{border:1px solid rgba(34,224,255,.34)}.halo.d{border:1px solid rgba(255,63,180,.34)}
+@keyframes sp{0%{transform:scale(.65);opacity:.7}100%{transform:scale(1.5);opacity:0}}
+.stem{position:absolute;left:0;width:1px;background:linear-gradient(rgba(139,92,255,.55),transparent)}
+.card{position:absolute;left:0;transform:translateX(-50%);white-space:nowrap;text-align:center;
+  padding:10px 16px;border-radius:10px;border:1px solid var(--hair);background:var(--glass);
+  backdrop-filter:blur(16px);box-shadow:0 8px 32px rgba(0,0,0,.62),inset 0 1px 0 rgba(255,255,255,.08)}
+.ct{font-size:12.5px;font-weight:700;letter-spacing:.14em;color:#fff}
+.cv{font-family:var(--mono);font-size:17px;margin-top:4px;letter-spacing:-.025em;font-weight:500}
+.cv.p{color:var(--cy2);text-shadow:0 0 15px rgba(34,224,255,.6)}
+.cv.d{color:var(--mg2);text-shadow:0 0 15px rgba(255,63,180,.6)}
+.fnote{display:flex;justify-content:space-between;font:var(--micro);letter-spacing:.18em;color:var(--t4);margin-top:20px}
 
-.mono { font-family: var(--mono); }
-.muted { color: var(--text-muted); }
-.small { font-size: 12px; }
-.center { text-align: center; }
+/* ── DESCENT: field → channels.  Makes the deck read as
+      readouts OF the instrument above, not a separate section. ── */
+.descent{position:relative;height:54px;z-index:1}
+.descent i{position:absolute;left:50%;top:0;bottom:14px;width:1px;margin-left:-.5px;
+  background:linear-gradient(180deg,var(--cy),rgba(34,224,255,0));opacity:.5}
+.descent b{position:absolute;left:50%;bottom:6px;width:7px;height:7px;margin-left:-3.5px;
+  border-left:1px solid var(--hairc);border-bottom:1px solid var(--hairc);transform:rotate(-45deg)}
 
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 24px;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-panel);
-}
+/* ── INSTRUMENTATION CONSOLE — six channels of one machine ── */
+.deck{padding:0 0 92px;position:relative;z-index:1}
+.dhd{display:flex;justify-content:space-between;align-items:baseline;padding-bottom:13px;
+  border-bottom:1px solid var(--hair)}
+.bays{display:grid;grid-template-columns:repeat(6,1fr);position:relative;margin-top:0}
+/* ambient light crossing behind all channels — binds them optically */
+.bays::after{content:"";position:absolute;left:0;right:0;top:150px;height:120px;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse 52% 100% at 50% 50%,rgba(139,92,255,.13),transparent 72%)}
+.bay{position:relative;z-index:1;padding:26px var(--bay-pad) 24px;display:flex;flex-direction:column;
+  opacity:0;transform:translateY(12px);
+  transition:opacity 760ms ease,transform 760ms cubic-bezier(.16,1,.3,1),background 280ms}
+.bay:hover{background:linear-gradient(180deg,rgba(139,92,255,.085),transparent 76%)}
+/* weak PARTIAL separator — not a full-height card border */
+.bay+.bay::before{content:"";position:absolute;left:0;top:40px;bottom:40px;width:1px;
+  background:linear-gradient(180deg,transparent,var(--hair) 18%,var(--hair) 82%,transparent)}
+/* top registration tick — channel index marker */
+.bay::after{content:"";position:absolute;top:0;left:var(--bay-pad);width:11px;height:1px;background:var(--hairc);opacity:.7}
 
-.brand { display: flex; align-items: baseline; gap: 10px; }
-.brand-mark { color: var(--accent); font-size: 18px; }
-.brand-name { font-weight: 700; font-size: 16px; letter-spacing: 0.02em; }
-.brand-sub { color: var(--text-muted); font-size: 12px; }
+.bhead{height:128px}
+.bsym{font-size:16px;font-weight:700;letter-spacing:.15em;color:#fff}
+.bname{font:var(--micro);font-size:8.5px;letter-spacing:.2em;color:var(--t4);margin-top:5px}
+.bval{font-family:var(--mono);font-size:23px;font-weight:500;letter-spacing:-.035em;margin-top:18px;line-height:1}
+.bval.p{color:var(--cy2);text-shadow:0 0 18px rgba(34,224,255,.5)}
+.bval.d{color:var(--mg2);text-shadow:0 0 18px rgba(255,63,180,.5)}
+.bdir{font:var(--micro);font-size:8px;letter-spacing:.22em;margin-top:8px}
+.bdir.p{color:var(--cy)}.bdir.d{color:var(--mg)}
 
-main#app { max-width: 1200px; margin: 0 auto; padding: 24px; }
+/* ═══ MINIATURE EQUILIBRIUM INSTRUMENT ═══
+   Origin = 0.00% parity. A beam measures out from origin to the true
+   deviation endpoint. Same signed-log scale as the field above. */
+.chan{position:relative;height:46px;margin-top:2px}
+/* shared datum — bleeds past the bay edges so all six join into ONE rail */
+.chan .datum{position:absolute;left:calc(-1 * var(--bay-pad) - 1px);right:calc(-1 * var(--bay-pad));
+  top:23px;height:1px;background:rgba(255,255,255,.085)}
+.chan .grad{position:absolute;top:19px;width:1px;height:9px;background:rgba(255,255,255,.11);transform:translateX(-.5px)}
+/* the parity origin: the one cyan landmark in every channel */
+.chan .origin{position:absolute;left:50%;top:11px;width:1px;height:25px;margin-left:-.5px;background:var(--cy);
+  box-shadow:0 0 9px var(--cy);opacity:.9}
+.chan .olabel{position:absolute;left:50%;top:38px;transform:translateX(-50%);font:var(--micro);
+  font-size:7px;letter-spacing:.14em;color:var(--t5)}
+/* measurement beam out of origin */
+.chan .beamx{position:absolute;top:22px;height:2px;width:0;border-radius:2px;
+  transition:width 1150ms cubic-bezier(.16,1,.3,1)}
+.chan .beamx.p{left:50%;background:linear-gradient(90deg,rgba(34,224,255,.30),var(--cy))}
+.chan .beamx.d{right:50%;background:linear-gradient(270deg,rgba(255,63,180,.30),var(--mg))}
+/* endpoint: measured deviation, with a small precision bracket */
+.chan .end{position:absolute;top:23px;left:50%;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;
+  transition:left 1150ms cubic-bezier(.16,1,.3,1)}
+.chan .end.p{background:var(--cy2);box-shadow:0 0 10px var(--cy),0 0 22px rgba(34,224,255,.55)}
+.chan .end.d{background:var(--mg2);box-shadow:0 0 10px var(--mg),0 0 22px rgba(255,63,180,.55)}
+.chan .brk{position:absolute;top:23px;left:50%;width:13px;height:15px;margin:-7.5px 0 0 -6.5px;
+  transition:left 1150ms cubic-bezier(.16,1,.3,1);opacity:.55}
+.chan .brk::before,.chan .brk::after{content:"";position:absolute;width:4px;height:100%}
+.chan .brk::before{left:0;border-left:1px solid currentColor;border-top:1px solid currentColor;border-bottom:1px solid currentColor}
+.chan .brk::after{right:0;border-right:1px solid currentColor;border-top:1px solid currentColor;border-bottom:1px solid currentColor}
+.chan .brk.p{color:var(--cy)}.chan .brk.d{color:var(--mg)}
 
-.view-heading h1 { font-size: 20px; margin: 0 0 4px 0; }
-.view-heading { margin-bottom: 18px; }
+/* telemetry */
+.tele{margin-top:16px}
+.brow{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--mono);
+  font-size:11px;color:var(--t2);padding:5px 0;letter-spacing:-.01em}
+.brow+.brow{border-top:1px solid rgba(139,92,255,.10)}
+.brow span:first-child{color:var(--t4);letter-spacing:.16em;font-size:8px;text-transform:uppercase;font-weight:600}
 
-table.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  overflow: hidden;
-}
+/* baseline intelligence — tertiary */
+.bbase{margin-top:auto;padding-top:18px}
+.bbl{font:var(--micro);font-size:8px;letter-spacing:.2em;color:var(--vi)}
+.segs{display:flex;gap:2px;margin-top:8px}
+.segs i{flex:1;height:3px;background:rgba(139,92,255,.16);border-radius:1px;
+  transition:background 420ms ease,box-shadow 420ms ease}
+.segs i.on{background:var(--vi);box-shadow:0 0 7px rgba(139,92,255,.8)}
+.bobs{font:var(--micro);font-size:8.5px;letter-spacing:.16em;color:var(--t4);margin-top:9px}
+@media(max-width:1180px){.bays{grid-template-columns:repeat(3,1fr)}
+  .bay:nth-child(3n+1)::before{display:none}}
+@media(max-width:760px){.wrap{padding:0 20px}.zv{font-size:52px}.rail{height:300px}.bd,.pills{display:none}
+  .bays{grid-template-columns:repeat(2,1fr)}.bay:nth-child(3n+1)::before{display:block}
+  .bay:nth-child(2n+1)::before{display:none}.bhead{height:auto;margin-bottom:16px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
-table.data-table th {
-  text-align: left;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-muted);
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-panel-alt);
-}
+/* ═══════════════════════════════════════════════════════════════════════
+   PRODUCTION ADDITIONS
+   Everything above this line is the locked visual specification, ported
+   verbatim. Below: states that only real data can produce, plus the
+   existing ticker-detail view restyled into the same language.
+   The detail experience receives its own NEON // INSTRUMENT redesign in a
+   later slice — this is compatibility styling only.
+   ═══════════════════════════════════════════════════════════════════════ */
 
-table.data-table td {
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--border);
-  font-family: var(--mono);
-  font-size: 13px;
-  vertical-align: middle;
-}
+/* ── Unavailable states (real data only) ──────────────────────────────
+   A deviation that is genuinely unknown is never placed at 0.00% and
+   never implies parity. It leaves the field entirely. */
+.offfield{margin-top:22px;padding-top:16px;border-top:1px solid var(--hair);
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.offchip{display:inline-flex;align-items:center;gap:9px;padding:6px 13px;border-radius:999px;
+  border:1px dashed rgba(255,255,255,.18);background:rgba(255,255,255,.02);
+  font:var(--micro);font-size:9.5px;letter-spacing:.16em;color:var(--t3)}
+.offchip b{color:var(--t2);font-weight:700;letter-spacing:.12em;font-size:11px}
 
-table.data-table tbody tr:last-child td { border-bottom: none; }
-table.data-table tbody tr.clickable { cursor: pointer; }
-table.data-table tbody tr.clickable:hover { background: var(--bg-panel-alt); }
+/* Channel with no measurable deviation: origin stays, beam does not. */
+.bval.na{color:var(--t3);text-shadow:none;font-size:19px;letter-spacing:-.02em}
+.bdir.na{color:var(--t4)}
+.chan.na .origin{opacity:.4}
+.chan.na .olabel{color:var(--t5)}
 
-.ticker-symbol { font-weight: 700; font-family: var(--sans); font-size: 14px; }
+/* ── Detail view (compatibility) ─────────────────────────────────────── */
+.view-heading{margin-bottom:26px}
+.view-heading h1{font-size:30px;font-weight:600;letter-spacing:.1em;margin:0 0 12px;color:#fff}
+.link-button{background:none;border:none;color:var(--t3);font-family:var(--sans);font-size:12px;
+  letter-spacing:.1em;cursor:pointer;padding:8px 0;margin-bottom:18px;transition:color 180ms ease}
+.link-button:hover{color:var(--cy)}
+.detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr));
+  gap:16px;margin-bottom:16px}
+.panel{background:var(--glass);border:1px solid var(--hair);border-radius:12px;padding:22px;
+  margin-bottom:16px;backdrop-filter:blur(14px);min-width:0}
+.panel h2{font:var(--micro);font-size:9px;letter-spacing:.24em;text-transform:uppercase;
+  color:var(--t3);margin:0 0 16px}
+dl.kv{margin:0;display:grid;grid-template-columns:minmax(0,auto) minmax(0,1fr);gap:12px 20px}
+dl.kv dt{color:var(--t4);font:var(--micro);font-size:9px;letter-spacing:.16em;align-self:center}
+dl.kv dd{margin:0;font-family:var(--mono);font-size:13px;text-align:right;min-width:0;
+  overflow-wrap:anywhere;word-break:break-word;color:var(--t2)}
+.mono{font-family:var(--mono);font-size:11px;color:var(--t4)}
+.badge{display:inline-flex;align-items:center;gap:7px;padding:4px 11px;border-radius:999px;
+  font:var(--micro);font-size:9.5px;letter-spacing:.14em;border:1px solid var(--hair);
+  background:rgba(139,92,255,.10);color:var(--vi)}
+.badge.tone-green{border-color:var(--hairc);background:rgba(34,224,255,.09);color:var(--cy)}
+.badge.tone-amber{border-color:rgba(139,92,255,.30);background:rgba(139,92,255,.10);color:var(--vi)}
+.badge.tone-red{border-color:var(--hairm);background:rgba(255,63,180,.09);color:var(--mg)}
+.badge.tone-gray{border-color:rgba(255,255,255,.10);background:rgba(255,255,255,.03);color:var(--t3)}
+.table-scroll{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.data-table{width:100%;border-collapse:collapse;border:1px solid var(--hair);border-radius:10px;overflow:hidden}
+table.data-table th{text-align:left;font:var(--micro);font-size:8.5px;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--t4);padding:12px 15px;border-bottom:1px solid var(--hair);white-space:nowrap}
+table.data-table td{padding:14px 15px;border-bottom:1px solid rgba(139,92,255,.10);
+  font-size:12.5px;color:var(--t2);overflow-wrap:anywhere}
+table.data-table tbody tr:last-child td{border-bottom:none}
+.chart-tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.chart-tab{background:transparent;border:1px solid var(--hair);color:var(--t3);border-radius:7px;
+  padding:7px 14px;font:var(--micro);font-size:9.5px;letter-spacing:.14em;cursor:pointer;
+  transition:color 180ms ease,border-color 180ms ease,background 180ms ease}
+.chart-tab:hover{color:var(--t2);border-color:var(--hairc)}
+.chart-tab.active{color:var(--cy);border-color:var(--hairc);background:rgba(34,224,255,.07)}
+#history-chart-wrap{background:rgba(3,3,10,.5);border:1px solid var(--hair);border-radius:10px;padding:14px}
+#history-chart{width:100%;height:230px;display:block}
+.small{font-size:11.5px}
+.faint{color:var(--t4)}
+.center{text-align:center}
+.footer{border-top:1px solid var(--hair);padding-block:22px;margin-top:60px;position:relative;z-index:1}
+.footer-inner{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  font:var(--micro);font-size:9px;letter-spacing:.16em;color:var(--t5)}
+:where(a,button,[tabindex]):focus-visible{outline:2px solid var(--cy);outline-offset:3px;border-radius:6px}
 
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-family: var(--sans);
-  font-weight: 600;
-  white-space: nowrap;
-}
+/* ── Interaction affordance (P4 integration fix) ──────────────────────
+   Cursor + focus routing only. No layout, spacing, colour, animation or
+   data rendering is altered by anything in this block. */
+.bay.is-interactive{cursor:pointer}
+.ast.is-interactive .card,
+.ast.is-interactive .mkr,
+.ast.is-interactive .halo{cursor:pointer}
 
-.badge.tone-green { background: var(--green-bg); color: var(--green); }
-.badge.tone-amber { background: var(--amber-bg); color: var(--amber); }
-.badge.tone-red { background: var(--red-bg); color: var(--red); }
-.badge.tone-gray { background: var(--gray-bg); color: var(--gray); }
-
-.legend { margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap; }
-
-.pct-positive { color: var(--green); }
-.pct-negative { color: var(--red); }
-
-.link-button {
-  background: none;
-  border: none;
-  color: var(--accent);
-  font-family: var(--sans);
-  font-size: 13px;
-  cursor: pointer;
-  padding: 0;
-  margin-bottom: 14px;
-}
-.link-button:hover { text-decoration: underline; }
-
-.detail-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 14px;
-  margin-bottom: 14px;
-}
-
-.panel {
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 16px 18px;
-  margin-bottom: 14px;
-}
-
-.panel h2 {
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-muted);
-  margin: 0 0 12px 0;
-}
-
-dl.kv { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; }
-dl.kv dt { color: var(--text-muted); font-size: 12px; }
-dl.kv dd { margin: 0; font-family: var(--mono); font-size: 13px; text-align: right; overflow-wrap: anywhere; }
-
-.chart-tabs { display: flex; gap: 8px; margin-bottom: 10px; }
-.chart-tab {
-  background: var(--bg-panel-alt);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  border-radius: 4px;
-  padding: 6px 12px;
-  font-size: 12px;
-  cursor: pointer;
-  font-family: var(--sans);
-}
-.chart-tab.active { color: var(--accent); border-color: var(--accent); }
-
-#history-chart-wrap {
-  background: var(--bg-panel-alt);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 8px;
-}
-#history-chart { width: 100%; height: 220px; display: block; }
-
-.footer {
-  text-align: center;
-  padding: 20px;
-  border-top: 1px solid var(--border);
-}
-
-@media (max-width: 720px) {
-  main#app { padding: 12px; }
-  table.data-table { font-size: 12px; }
-}
+/* .ast is a zero-width positioning container spanning the full rail
+   height, so a focus ring drawn on it would appear as a stray vertical
+   line. Move the ring onto the visible readout card instead. */
+.ast.is-interactive:focus-visible{outline:none}
+.ast.is-interactive:focus-visible .card{outline:2px solid var(--cy);outline-offset:3px;border-radius:10px}

@@ -1,7 +1,349 @@
-// Parity dashboard frontend. Plain JS, no build step, no framework.
-// This file only ever fetches from same-origin /api/* endpoints — no
-// third-party keys or secrets are ever needed or present here.
+// PARITY — production frontend.
+//
+// Visual system ported from the locked specification
+// (concepts/final-neon-refined.html, sha256 513cce6f…dc83).
+//
+// DATA RULES (non-negotiable):
+//   · All values come from the existing /api/tickers contract.
+//   · The frontend performs VISUAL POSITIONING only. It never recreates
+//     P3 baseline / maturity / classification / freshness semantics.
+//   · Unavailable is never rendered as zero, and a deviation that is
+//     genuinely unknown never receives a position on the field.
 
+// ---------------------------------------------------------------------
+// Formatting
+// ---------------------------------------------------------------------
+
+const DASH = "\u2014";
+
+function fmtSignedPct(v, digits) {
+  const d = digits === undefined ? 2 : digits;
+  const sign = v > 0 ? "+" : v < 0 ? "\u2212" : "";
+  return `${sign}${Math.abs(v).toFixed(d)}%`;
+}
+
+function fmtPrice(value) {
+  if (value === null || value === undefined) return DASH;
+  return value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function fmtClock(iso) {
+  if (!iso) return DASH;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return DASH;
+  return d.toISOString().slice(11, 19) + "Z";
+}
+
+function fmtTimestamp(iso) {
+  if (!iso) return DASH;
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? DASH : d.toLocaleString();
+}
+
+function setText(id, text) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = text;
+}
+
+function escapeHtml(s) {
+  const div = document.createElement("div");
+  div.textContent = s;
+  return div.innerHTML;
+}
+
+/** A deviation is positionable only when the API says it is genuinely ok. */
+function hasDeviation(t) {
+  return t.premiumDiscountPct && t.premiumDiscountPct.status === "ok" && typeof t.premiumDiscountPct.value === "number";
+}
+
+/**
+ * Baseline state copy, composed from STRUCTURED fields only.
+ *
+ * Deliberately does not use intelligence.label: that field can emit
+ * "x typical" wording for a MAD-denominated value, which violates our
+ * terminology requirement. Mature copy must say "MAD multiple" /
+ * "baseline dispersion multiple" — never "typical", never "z-score".
+ */
+function baselineCopy(intel) {
+  if (!intel) return { label: "INTELLIGENCE UNAVAILABLE", learning: false };
+  if (intel.maturity === "MATURE") {
+    if (intel.classification) {
+      const mult = typeof intel.relativeDeviationMultiple === "number"
+        ? ` \u00b7 ${intel.relativeDeviationMultiple.toFixed(2)}\u00d7 MAD MULTIPLE`
+        : "";
+      return { label: `${intel.classification}${mult}`, learning: false };
+    }
+    return { label: "BASELINE MATURE", learning: false };
+  }
+  if (intel.maturity === "DEVELOPING") return { label: "BASELINE LEARNING", learning: true };
+  return { label: "INSUFFICIENT DATA", learning: false };
+}
+
+// ---------------------------------------------------------------------
+// Truthful scale — ported verbatim from the locked specification.
+//
+// symmetric signed-log · zero exactly centred · domain floor · positions
+// encode TRUE deviation. Collision handling may move a label's LANE only;
+// it never alters horizontal measurement position.
+// ---------------------------------------------------------------------
+
+const K = 0.05;
+const FLOOR = 0.5;
+const SPAN = 42;      // field half-width, %
+const CH_SPAN = 40;   // channel half-width, %
+
+let domainMax = FLOOR;
+
+function computeDomain(values) {
+  const maxAbs = values.length ? Math.max(...values.map(Math.abs)) : 0;
+  return Math.max(FLOOR, maxAbs * 1.15);
+}
+function tScale(v) {
+  return Math.sign(v) * (Math.log10(1 + Math.abs(v) / K) / Math.log10(1 + domainMax / K));
+}
+const pct = (v) => 50 + tScale(v) * SPAN;
+const chPct = (v) => 50 + tScale(v) * CH_SPAN;
+
+/**
+ * Make a rendered element navigate to the existing ticker-detail route.
+ *
+ * Reuses navigateTo()/renderRoute() already defined below — no routing
+ * logic is duplicated here. Purely additive: no layout, style, spacing,
+ * animation, colour or data rendering is affected.
+ */
+function makeInteractive(el, symbol, description) {
+  el.classList.add("is-interactive");
+  el.setAttribute("role", "link");
+  el.setAttribute("tabindex", "0");
+  el.setAttribute("aria-label", `${symbol} \u2014 ${description}`);
+  el.addEventListener("click", () => navigateTo(symbol));
+  el.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
+      e.preventDefault();
+      navigateTo(symbol);
+    }
+  });
+}
+
+// ---------------------------------------------------------------------
+// Primary equilibrium field
+// ---------------------------------------------------------------------
+
+function renderField(tickers) {
+  const rail = document.getElementById("rail");
+  if (!rail) return;
+
+  // Reset, preserving the static furniture defined in the markup.
+  rail.querySelectorAll(".tick,.tkm,.tkl,.ast").forEach((n) => n.remove());
+
+  const positioned = tickers.filter(hasDeviation);
+
+  // Major graduations (labelled) + minor graduations.
+  [0.05, 0.1, 0.25, 0.5, 1].filter((v) => v <= domainMax).forEach((v) =>
+    [v, -v].forEach((sv) => {
+      const x = pct(sv);
+      rail.insertAdjacentHTML(
+        "beforeend",
+        `<div class="tick" style="left:${x}%"></div>` +
+          `<div class="tkl" style="left:${x}%">${fmtSignedPct(sv, sv % 1 === 0 ? 0 : 2)}</div>`,
+      );
+    }),
+  );
+  [0.02, 0.07, 0.15, 0.35, 0.75].filter((v) => v <= domainMax).forEach((v) =>
+    [v, -v].forEach((sv) => {
+      rail.insertAdjacentHTML("beforeend", `<div class="tkm" style="left:${pct(sv)}%"></div>`);
+    }),
+  );
+
+  const lanes = [[-1, 64], [1, 64], [-1, 118], [1, 118], [-1, 172]];
+  const occ = new Map();
+
+  [...positioned]
+    .sort((a, b) => a.premiumDiscountPct.value - b.premiumDiscountPct.value)
+    .forEach((t, i) => {
+      const value = t.premiumDiscountPct.value;
+      const x = pct(value);
+
+      // Lane selection only — x is never adjusted.
+      let pick = lanes[lanes.length - 1];
+      for (const L of lanes) {
+        const key = L.join(":");
+        const used = occ.get(key) || [];
+        if (used.every((u) => Math.abs(u - x) > 8.5)) { pick = L; break; }
+      }
+      const key = pick.join(":");
+      occ.set(key, [...(occ.get(key) || []), x]);
+
+      const up = pick[0] < 0;
+      const off = pick[1];
+      const lane = 128 + pick[0] * off;
+      const dir = value >= 0 ? "p" : "d";
+
+      const el = document.createElement("div");
+      el.className = "ast";
+      el.style.left = "50%";
+      el.innerHTML =
+        `<div class="halo ${dir}"></div><div class="mkr ${dir}"></div>` +
+        `<div class="stem" style="top:${up ? lane : 128}px;height:${off - 18}px"></div>` +
+        `<div class="card" style="${up ? `bottom:${262 - lane + 10}px` : `top:${lane + 12}px`}">` +
+        `<div class="ct">${escapeHtml(t.symbol)}</div>` +
+        `<div class="cv ${dir}">${fmtSignedPct(value, 4)}</div></div>`;
+      makeInteractive(el, t.symbol, "open detail");
+      rail.appendChild(el);
+
+      // Markers settle outward from parity.
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() =>
+          setTimeout(() => { el.style.left = `${x}%`; el.style.opacity = "1"; }, i * 85),
+        ),
+      );
+    });
+
+  setText("dm", `FIELD \u00b1${domainMax.toFixed(2)}%`);
+
+  // Assets with no measurable deviation leave the field entirely — they are
+  // never placed at 0.00% and never imply parity.
+  const offWrap = document.getElementById("offfield");
+  const chips = document.getElementById("offfield-chips");
+  const off = tickers.filter((t) => !hasDeviation(t));
+  if (offWrap && chips) {
+    chips.textContent = "";
+    offWrap.hidden = off.length === 0;
+    for (const t of off) {
+      const chip = document.createElement("span");
+      chip.className = "offchip";
+      const b = document.createElement("b");
+      b.textContent = t.symbol;
+      chip.append(b, document.createTextNode("DEVIATION UNAVAILABLE"));
+      chips.appendChild(chip);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------
+// Channel deck — six readouts from the field above
+// ---------------------------------------------------------------------
+
+function renderDeck(tickers) {
+  const bays = document.getElementById("bays");
+  if (!bays) return;
+  bays.textContent = "";
+
+  const grads = [0.1, 0.25, 0.5]
+    .filter((v) => v <= domainMax)
+    .map((v) => [v, -v].map((sv) => `<span class="grad" style="left:${chPct(sv)}%"></span>`).join(""))
+    .join("");
+
+  bays.innerHTML = tickers
+    .map((t) => {
+      const ok = hasDeviation(t);
+      const value = ok ? t.premiumDiscountPct.value : null;
+      const dir = ok ? (value >= 0 ? "p" : "d") : "na";
+      const intel = t.intelligence || {};
+      const base = baselineCopy(intel);
+
+      // Baseline segments are NON-QUANTITATIVE. Maturity requires both an
+      // observation count AND elapsed hours, and elapsedHours is not on the
+      // overview contract — so a proportional fill would be fabricated.
+      const segClass = base.learning ? "on" : "";
+      const segs = Array.from({ length: 10 }, () => `<i class="${segClass}"></i>`).join("");
+
+      const reach = ok ? Math.abs(tScale(value)) * CH_SPAN : 0;
+      const endX = ok ? chPct(value) : 50;
+
+      return (
+        `<div class="bay" data-symbol="${escapeHtml(t.symbol)}">` +
+        `<div class="bhead">` +
+        `<div class="bsym">${escapeHtml(t.symbol)}</div>` +
+        `<div class="bval ${dir}">${ok ? fmtSignedPct(value, 4) : "UNAVAILABLE"}</div>` +
+        `<div class="bdir ${dir}">${ok ? (value >= 0 ? "PREMIUM" : "DISCOUNT") : "NO MEASUREMENT"}</div>` +
+        `</div>` +
+        `<div class="chan${ok ? "" : " na"}"><span class="datum"></span>${grads}` +
+        `<span class="origin"></span><span class="olabel">PARITY</span>` +
+        (ok
+          ? `<span class="beamx ${dir}" data-w="${reach}"></span>` +
+            `<span class="brk ${dir}" data-x="${endX}"></span>` +
+            `<span class="end ${dir}" data-x="${endX}"></span>`
+          : "") +
+        `</div>` +
+        `<div class="tele">` +
+        `<div class="brow"><span>REF</span><span>${fmtPrice(t.referencePrice && t.referencePrice.value)}</span></div>` +
+        `<div class="brow"><span>CHAIN</span><span>${fmtPrice(t.secondaryPrice && t.secondaryPrice.value)}</span></div>` +
+        `</div>` +
+        `<div class="bbase"><div class="bbl">${escapeHtml(base.label)}</div>` +
+        `<div class="segs">${segs}</div>` +
+        `<div class="bobs">${typeof intel.observationCount === "number" ? intel.observationCount : 0} OBSERVATIONS</div>` +
+        `</div></div>`
+      );
+    })
+    .join("");
+
+  // Channels power on; beams measure outward from origin; baseline segments
+  // illuminate progressively.
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
+      bays.querySelectorAll(".bay").forEach((b, i) => {
+        const sym = b.dataset.symbol;
+        if (sym) makeInteractive(b, sym, "open detail");
+        const at = 360 + i * 100;
+        setTimeout(() => { b.style.opacity = "1"; b.style.transform = "translateY(0)"; }, at);
+        setTimeout(() => {
+          const bm = b.querySelector(".beamx");
+          const e = b.querySelector(".end");
+          const k = b.querySelector(".brk");
+          if (bm) bm.style.width = `${bm.dataset.w}%`;
+          if (e) e.style.left = `${e.dataset.x}%`;
+          if (k) k.style.left = `${k.dataset.x}%`;
+        }, at + 180);
+        b.querySelectorAll(".segs i.on").forEach((s, j) => {
+          s.classList.remove("on");
+          setTimeout(() => s.classList.add("on"), at + 520 + j * 42);
+        });
+      });
+    }),
+  );
+}
+
+// ---------------------------------------------------------------------
+// Overview load
+// ---------------------------------------------------------------------
+
+async function loadGrid() {
+  try {
+    const res = await fetch("/api/tickers");
+    const data = await res.json();
+    const tickers = data.tickers || [];
+
+    domainMax = computeDomain(tickers.filter(hasDeviation).map((t) => t.premiumDiscountPct.value));
+
+    renderField(tickers);
+    renderDeck(tickers);
+
+    setText("channel-count", `${tickers.length} CHANNEL${tickers.length === 1 ? "" : "S"}`);
+
+    const latest = tickers.map((t) => t.lastUpdateTimestamp).filter(Boolean).sort().pop();
+    setText("snapshot-time", fmtClock(latest));
+
+    const learning = tickers.filter((t) => t.intelligence && t.intelligence.maturity !== "MATURE").length;
+    setText("deck-state", learning > 0 ? "Baseline learning" : "Baselines mature");
+
+    const dot = document.getElementById("live-dot");
+    const label = document.getElementById("live-label");
+    const ageMin = latest ? (Date.now() - new Date(latest).getTime()) / 60000 : Infinity;
+    if (dot) dot.style.animationPlayState = ageMin <= 45 ? "running" : "paused";
+    if (label) label.textContent = ageMin <= 45 ? "FIELD ACTIVE" : "FIELD STALE";
+  } catch (err) {
+    setText("dm", "FIELD UNAVAILABLE");
+    setText("deck-state", `Could not load: ${String(err)}`);
+  }
+}
+
+/**
+ * P2 status badge. Restored: the P4 overview rewrite replaced the head of
+ * this file and dropped STATUS_PRESENTATION + badge(), which the preserved
+ * detail code still calls (badgeWithId, renderProvenanceTable). Uses the
+ * existing .badge / .tone-* classes — no new styling introduced.
+ */
 const STATUS_PRESENTATION = {
   healthy_current: { label: "Healthy / current", tone: "green" },
   stale_reference: { label: "Stale reference", tone: "amber" },
@@ -12,95 +354,23 @@ const STATUS_PRESENTATION = {
 };
 
 function badge(status) {
-  const p = STATUS_PRESENTATION[status] || { label: status, tone: "gray" };
+  const p = STATUS_PRESENTATION[status] || { label: String(status), tone: "gray" };
   const span = document.createElement("span");
   span.className = `badge tone-${p.tone}`;
   span.textContent = p.label;
   return span;
 }
 
-function fmtPrice(value) {
-  if (value === null || value === undefined) return "—";
-  return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}`;
-}
-
+/** Detail-view helpers (used by the preserved detail/chart code below). */
 function fmtPct(value) {
-  if (value === null || value === undefined) return "—";
+  if (value === null || value === undefined) return DASH;
   const cls = value >= 0 ? "pct-positive" : "pct-negative";
-  const sign = value >= 0 ? "+" : "";
-  return `<span class="${cls}">${sign}${value.toFixed(4)}%</span>`;
-}
-
-function fmtTimestamp(iso) {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleString();
+  return `<span class="${cls}">${fmtSignedPct(value, 4)}</span>`;
 }
 
 function fieldOrDash(field, formatter) {
-  if (!field || field.value === null || field.value === undefined) return "—";
+  if (!field || field.value === null || field.value === undefined) return DASH;
   return formatter ? formatter(field.value) : String(field.value);
-}
-
-// ---------------------------------------------------------------------
-// Grid view
-// ---------------------------------------------------------------------
-
-async function loadGrid() {
-  const tbody = document.getElementById("grid-table-body");
-  try {
-    const res = await fetch("/api/tickers");
-    const data = await res.json();
-    tbody.innerHTML = "";
-    for (const row of data.tickers) {
-      const tr = document.createElement("tr");
-      tr.className = "clickable";
-      tr.addEventListener("click", () => navigateTo(row.symbol));
-
-      const tdSymbol = document.createElement("td");
-      const symSpan = document.createElement("span");
-      symSpan.className = "ticker-symbol";
-      symSpan.textContent = row.symbol;
-      tdSymbol.appendChild(symSpan);
-
-      const tdStatus = document.createElement("td");
-      tdStatus.appendChild(badge(row.overallStatus));
-
-      const tdRef = document.createElement("td");
-      tdRef.textContent = fieldOrDash(row.referencePrice, fmtPrice);
-
-      const tdSec = document.createElement("td");
-      tdSec.textContent = fieldOrDash(row.secondaryPrice, fmtPrice);
-
-      const tdPct = document.createElement("td");
-      tdPct.innerHTML = row.premiumDiscountPct && row.premiumDiscountPct.value !== null ? fmtPct(row.premiumDiscountPct.value) : "—";
-
-      const tdIntelligence = document.createElement("td");
-      tdIntelligence.textContent = row.intelligence ? row.intelligence.label : "—";
-
-      const tdHolders = document.createElement("td");
-      tdHolders.textContent = row.holderConcentration && row.holderConcentration.top10Pct !== null
-        ? `${row.holderConcentration.top10Pct.toFixed(2)}%`
-        : "unavailable";
-
-      const tdUpdated = document.createElement("td");
-      tdUpdated.textContent = fmtTimestamp(row.lastUpdateTimestamp);
-
-      tr.append(tdSymbol, tdStatus, tdRef, tdSec, tdPct, tdIntelligence, tdHolders, tdUpdated);
-      tbody.appendChild(tr);
-    }
-    document.getElementById("global-refresh-note").textContent =
-      `${data.tickers.length} supported ticker(s) — showing latest captured snapshot per ticker`;
-  } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="7" class="muted center">Could not load snapshot data: ${escapeHtml(String(err))}</td></tr>`;
-  }
-}
-
-function escapeHtml(s) {
-  const div = document.createElement("div");
-  div.textContent = s;
-  return div.innerHTML;
 }
 
 // ---------------------------------------------------------------------
@@ -332,7 +602,7 @@ function renderRoute() {
   const hash = window.location.hash.replace(/^#/, "");
   const symbol = hash.replace(/^\//, "").trim().toUpperCase();
 
-  const gridView = document.getElementById("grid-view");
+  const gridView = document.getElementById("overview-view");
   const detailView = document.getElementById("detail-view");
 
   if (symbol) {
