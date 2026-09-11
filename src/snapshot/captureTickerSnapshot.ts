@@ -1,0 +1,227 @@
+import type { PublicClient } from "viem";
+import type { TickerConfig, DataPoint } from "../domain/types.js";
+import type { RobinhoodAssetsResponse } from "../sources/robinhoodRegistry.js";
+import { findDeploymentOnChain } from "../sources/robinhoodRegistry.js";
+import { fetchRobinhoodPrice, type RobinhoodPriceQuote } from "../sources/robinhoodPrices.js";
+import { readChainlinkFeed, readStockTokenMultiplierState, type ChainlinkReading, type StockTokenMultiplierState } from "../sources/chainlinkFeed.js";
+import { resolvePoolAddress, readPoolSpotPrice, UNISWAP_V3_FACTORY_MAINNET, type PoolSpotPrice } from "../sources/uniswapV3Pool.js";
+import { readErc20Decimals, readTotalSupply } from "../sources/erc20.js";
+import { fetchTopHolders, computeConcentrationBands, type TokenHolder } from "../sources/blockscoutHolders.js";
+import { computeStockTokenPriceInQuoteAsset } from "../domain/poolPrice.js";
+import { buildParitySnapshot } from "../parity/buildParitySnapshot.js";
+import { serializeDataPoint } from "./serialize.js";
+import type { TickerSnapshotRecord, RobinhoodPriceSnapshotValue, ChainlinkReferenceSnapshotValue, HolderConcentrationSnapshotValue } from "./types.js";
+
+const USDG_MAINNET = "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168" as const; // source: useWield/wield-contracts README, cross-confirmed multiple times — see PROVENANCE.md
+
+/**
+ * Every network call this module makes is injectable, so orchestration
+ * logic (this file) can be unit-tested with fakes, independent of the
+ * already-tested real implementations in src/sources/. Defaults are the
+ * real, live implementations.
+ */
+export interface CaptureDeps {
+  fetchPrice: (symbol: string) => Promise<RobinhoodPriceQuote>;
+  readFeed: (client: PublicClient, feedAddress: `0x${string}`) => Promise<ChainlinkReading>;
+  readMultiplierState: (client: PublicClient, tokenAddress: `0x${string}`) => Promise<StockTokenMultiplierState>;
+  resolvePool: (
+    client: PublicClient,
+    factory: `0x${string}`,
+    tokenA: `0x${string}`,
+    tokenB: `0x${string}`,
+    feeTier: number,
+  ) => Promise<`0x${string}` | null>;
+  readSpotPrice: (client: PublicClient, poolAddress: `0x${string}`) => Promise<PoolSpotPrice>;
+  readDecimals: (client: PublicClient, tokenAddress: `0x${string}`) => Promise<number>;
+  fetchHolders: (tokenAddress: string) => Promise<TokenHolder[]>;
+  readSupply: (client: PublicClient, tokenAddress: `0x${string}`) => Promise<bigint>;
+}
+
+export const defaultCaptureDeps: CaptureDeps = {
+  fetchPrice: fetchRobinhoodPrice,
+  readFeed: readChainlinkFeed,
+  readMultiplierState: readStockTokenMultiplierState,
+  resolvePool: resolvePoolAddress,
+  readSpotPrice: readPoolSpotPrice,
+  readDecimals: readErc20Decimals,
+  fetchHolders: fetchTopHolders,
+  readSupply: readTotalSupply,
+};
+
+function unavailable<T>(reason: DataPoint<T> extends never ? never : string, detail: string, source: string): DataPoint<T> {
+  return { status: "unavailable", reason: reason as never, detail, source } as DataPoint<T>;
+}
+
+/**
+ * Capture one ticker's full snapshot. Every field is fetched and converted
+ * to a DataPoint independently — a failure in one field (e.g. Blockscout
+ * being down) cannot prevent any other field from being recorded. This
+ * mirrors, and for the reference/secondary/premium-discount fields directly
+ * reuses, buildParitySnapshot()'s already-tested composition logic rather
+ * than re-implementing it.
+ */
+export async function captureTickerSnapshot(
+  ticker: TickerConfig,
+  registry: RobinhoodAssetsResponse | null,
+  client: PublicClient,
+  runId: string,
+  deps: CaptureDeps = defaultCaptureDeps,
+): Promise<TickerSnapshotRecord> {
+  const now = new Date();
+
+  // 1. Registry status — independent of everything else below.
+  let robinhoodAssetStatus: DataPoint<string>;
+  const asset = registry?.assets.find((a) => a.tokenSymbol === ticker.symbol);
+  if (asset) {
+    const deployment = findDeploymentOnChain(asset, 4663);
+    robinhoodAssetStatus = {
+      status: "ok",
+      value: `${asset.status} (multiplier=${asset.currentMultiplier}, mainnetDeployment=${deployment?.contractAddress ?? "none"})`,
+      asOf: now,
+      source: "docs.robinhood.com/chain/stock-token-apis (/rhj/assets)",
+    };
+  } else {
+    robinhoodAssetStatus = unavailable(
+      "upstream_error",
+      registry ? `${ticker.symbol} not found in live registry response` : "registry fetch failed for this run",
+      "docs.robinhood.com/chain/stock-token-apis (/rhj/assets)",
+    );
+  }
+
+  // 2. Robinhood price/state.
+  let robinhoodPrice: DataPoint<RobinhoodPriceSnapshotValue>;
+  try {
+    const quote = await deps.fetchPrice(ticker.symbol);
+    const mid = (Number(quote.bid) + Number(quote.ask)) / 2;
+    robinhoodPrice = {
+      status: "ok",
+      value: { bid: quote.bid, ask: quote.ask, mid, isTradingHalt: quote.isTradingHalt, generatedAt: quote.generatedAt },
+      asOf: now,
+      source: "docs.robinhood.com/chain/stock-token-apis (/rhj/prices)",
+    };
+  } catch (err) {
+    robinhoodPrice = unavailable("upstream_error", err instanceof Error ? err.message : String(err), "/rhj/prices");
+  }
+
+  // 3. Chainlink reference + oraclePaused.
+  let chainlinkReference: DataPoint<ChainlinkReferenceSnapshotValue>;
+  let oraclePaused: DataPoint<boolean>;
+  let referenceForCalc: DataPoint<number> = unavailable("no_chainlink_feed", "no feed configured", "chainlink");
+  if (!ticker.chainlinkFeedMainnet) {
+    chainlinkReference = unavailable("no_chainlink_feed", "no feed configured for this ticker", "chainlink");
+    oraclePaused = unavailable("no_chainlink_feed", "no feed configured for this ticker", "chainlink");
+  } else {
+    try {
+      const reading = await deps.readFeed(client, ticker.chainlinkFeedMainnet as `0x${string}`);
+      chainlinkReference = {
+        status: "ok",
+        value: { normalizedPrice: reading.normalizedPrice, decimals: reading.decimals, updatedAt: reading.updatedAt.toISOString() },
+        asOf: now,
+        source: "Chainlink AggregatorV3 (Robinhood Chain mainnet)",
+      };
+      referenceForCalc = { status: "ok", value: reading.normalizedPrice, asOf: reading.updatedAt, source: "chainlink" };
+      try {
+        const multState = await deps.readMultiplierState(client, ticker.tokenAddressMainnet as `0x${string}`);
+        oraclePaused = { status: "ok", value: multState.oraclePaused, asOf: now, source: "Stock Token contract oraclePaused()" };
+      } catch (err) {
+        oraclePaused = unavailable("upstream_error", err instanceof Error ? err.message : String(err), "oraclePaused()");
+      }
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      chainlinkReference = unavailable("rpc_unreachable", detail, "chainlink");
+      oraclePaused = unavailable("rpc_unreachable", detail, "chainlink");
+      referenceForCalc = unavailable("rpc_unreachable", detail, "chainlink");
+    }
+  }
+
+  // 4. Secondary price (pool resolution + decimals/orientation normalization).
+  let secondaryForCalc: DataPoint<number> = unavailable("no_verified_pool", "no pool candidate configured", "uniswap_v3");
+  if (ticker.tokenAddressMainnet && ticker.poolFeeTier && ticker.quoteAsset === "USDG") {
+    try {
+      const poolAddress = await deps.resolvePool(
+        client,
+        UNISWAP_V3_FACTORY_MAINNET,
+        ticker.tokenAddressMainnet as `0x${string}`,
+        USDG_MAINNET,
+        ticker.poolFeeTier,
+      );
+      if (!poolAddress) {
+        secondaryForCalc = unavailable("no_verified_pool", `factory.getPool returned no pool for ${ticker.symbol}/USDG`, "uniswap_v3");
+      } else {
+        const spot = await deps.readSpotPrice(client, poolAddress);
+        const [decimals0, decimals1] = await Promise.all([
+          deps.readDecimals(client, spot.token0),
+          deps.readDecimals(client, spot.token1),
+        ]);
+        const normalizedPrice = computeStockTokenPriceInQuoteAsset({
+          sqrtPriceX96: spot.sqrtPriceX96,
+          token0: spot.token0,
+          token1: spot.token1,
+          decimals0,
+          decimals1,
+          expectedStockTokenAddress: ticker.tokenAddressMainnet,
+          expectedQuoteAssetAddress: USDG_MAINNET,
+        });
+        secondaryForCalc = { status: "ok", value: normalizedPrice, asOf: now, source: `Uniswap V3 pool ${poolAddress}` };
+      }
+    } catch (err) {
+      secondaryForCalc = unavailable("upstream_error", err instanceof Error ? err.message : String(err), "uniswap_v3");
+    }
+  }
+
+  // 5. Compose reference/secondary/premium-discount/trading-halt via the
+  // already-tested buildParitySnapshot — no reimplementation of that logic.
+  const tradingHalt: DataPoint<boolean> =
+    robinhoodPrice.status === "ok"
+      ? { status: "ok", value: robinhoodPrice.value.isTradingHalt, asOf: now, source: "/rhj/prices" }
+      : unavailable("upstream_error", "robinhood price unavailable, trading-halt state unknown", "/rhj/prices");
+
+  const composed = buildParitySnapshot(ticker, {
+    chainlinkReference: referenceForCalc,
+    secondaryMarket: secondaryForCalc,
+    tradingHalt,
+    oraclePaused,
+  }, now);
+
+  // 6. Holder concentration — best-effort, never blocks anything above.
+  let holderConcentration: DataPoint<HolderConcentrationSnapshotValue>;
+  if (!ticker.tokenAddressMainnet) {
+    holderConcentration = unavailable("upstream_error", "no token address configured", "blockscout");
+  } else {
+    try {
+      const [holders, totalSupply] = await Promise.all([
+        deps.fetchHolders(ticker.tokenAddressMainnet),
+        deps.readSupply(client, ticker.tokenAddressMainnet as `0x${string}`),
+      ]);
+      const bands = computeConcentrationBands(holders, totalSupply);
+      holderConcentration = {
+        status: "ok",
+        value: { holderRows: holders.length, ...bands },
+        asOf: now,
+        source: "Blockscout (robinhoodchain.blockscout.com)",
+      };
+    } catch (err) {
+      // Per explicit instruction: a temporary Blockscout failure must not
+      // invalidate the rest of this otherwise-valid market snapshot — it is
+      // recorded as unavailable here, and every other field above is
+      // entirely unaffected by this catch block.
+      holderConcentration = unavailable("upstream_error", err instanceof Error ? err.message : String(err), "blockscout");
+    }
+  }
+
+  return {
+    recordType: "ticker_snapshot",
+    runId,
+    capturedAt: new Date().toISOString(),
+    ticker: ticker.symbol,
+    canonicalTokenAddress: ticker.tokenAddressMainnet,
+    configuredPoolAddress: ticker.poolAddressMainnet,
+    robinhoodAssetStatus: serializeDataPoint(robinhoodAssetStatus),
+    robinhoodPrice: serializeDataPoint(robinhoodPrice),
+    chainlinkReference: serializeDataPoint(chainlinkReference),
+    oraclePaused: serializeDataPoint(oraclePaused),
+    secondaryPrice: serializeDataPoint(composed.secondaryPrice),
+    premiumDiscountPct: serializeDataPoint(composed.premiumDiscountPct),
+    holderConcentration: serializeDataPoint(holderConcentration),
+  };
+}

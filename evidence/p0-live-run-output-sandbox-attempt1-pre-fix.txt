@@ -1,0 +1,317 @@
+=== Parity P0 Live Ground-Truth Proof ===
+
+[FAIL] Step 2: Robinhood registry (/rhj/assets): Robinhood registry API returned HTTP 403
+[FAIL] Step 3: price AAPL: Robinhood prices API returned HTTP 403 for AAPL
+[FAIL] Step 3: price GOOGL: Robinhood prices API returned HTTP 403 for GOOGL
+[FAIL] Step 3: price USO: Robinhood prices API returned HTTP 403 for USO
+[FAIL] Step 3: price SPCX: Robinhood prices API returned HTTP 403 for SPCX
+[FAIL] Step 3: price HOOD: Robinhood prices API returned HTTP 403 for HOOD
+[FAIL] Step 4: Chainlink feed AAPL: HTTP request failed.
+
+Status: 403
+URL: https://rpc.mainnet.chain.robinhood.com/
+Request body: {"method":"eth_call","params":[{"data":"0xfeaf968c","to":"0x6B22A786bAa607d76728168703a39Ea9C99f2cD0"},"latest"]}
+ 
+Raw Call Arguments:
+  to:    0x6B22A786bAa607d76728168703a39Ea9C99f2cD0
+  data:  0xfeaf968c
+ 
+Contract Call:
+  address:   0x6B22A786bAa607d76728168703a39Ea9C99f2cD0
+  function:  latestRoundData()
+
+Docs: https://viem.sh/docs/contract/readContract
+Details: "Host not in allowlist: rpc.mainnet.chain.robinhood.com. Add this host to your network egress settings to allow access."
+Version: viem@2.56.3
+[FAIL] Step 4: Chainlink feed GOOGL: HTTP request failed.
+
+Status: 403
+URL: https://rpc.mainnet.chain.robinhood.com/
+Request body: {"method":"eth_call","params":[{"data":"0xfeaf968c","to":"0xF6f373a037c30F0e5010d854385cA89185AE638b"},"latest"]}
+ 
+Raw Call Arguments:
+  to:    0xF6f373a037c30F0e5010d854385cA89185AE638b
+  data:  0xfeaf968c
+ 
+Contract Call:
+  address:   0xF6f373a037c30F0e5010d854385cA89185AE638b
+  function:  latestRoundData()
+
+Docs: https://viem.sh/docs/contract/readContract
+Details: "Host not in allowlist: rpc.mainnet.chain.robinhood.com. Add this host to your network egress settings to allow access."
+Version: viem@2.56.3
+[FAIL] Step 4: Chainlink feed USO: HTTP request failed.
+
+Status: 403
+URL: https://rpc.mainnet.chain.robinhood.com/
+Request body: {"method":"eth_call","params":[{"data":"0x313ce567","to":"0x75a9c76Ef439e2C7c2E5a34Ab105EcFe3766431c"},"latest"]}
+ 
+Raw Call Arguments:
+  to:    0x75a9c76Ef439e2C7c2E5a34Ab105EcFe3766431c
+  data:  0x313ce567
+ 
+Contract Call:
+  address:   0x75a9c76Ef439e2C7c2E5a34Ab105EcFe3766431c
+  function:  decimals()
+
+Docs: https://viem.sh/docs/contract/readContract
+Details: "Host not in allowlist: rpc.mainnet.chain.robinhood.com. Add this host to your network egress settings to allow access."
+Version: viem@2.56.3
+[FAIL] Step 4: Chainlink feed SPCX: HTTP request failed.
+
+Status: 403
+URL: https://rpc.mainnet.chain.robinhood.com/
+Request body: {"method":"eth_call","params":[{"data":"0x313ce567","to":"0xB265810950ba6c5C0Ff821c9963014a56fD8Bffb"},"latest"]}
+ 
+Raw Call Arguments:
+  to:    0xB265810950ba6c5C0Ff821c9963014a56fD8Bffb
+  data:  0x313ce567
+ 
+Contract Call:
+  address:   0xB265810950ba6c5C0Ff821c9963014a56fD8Bffb
+  function:  decimals()
+
+Docs: https://viem.sh/docs/contract/readContract
+Details: "Host not in allowlist: rpc.mainnet.chain.robinhood.com. Add this host to your network egress settings to allow access."
+Version: viem@2.56.3
+[FAIL] Step 4: Chainlink feed HOOD: No published feed (per config provenance) — marked unsupported, not silently skipped.
+[FAIL] Step 5: pool AAPL: HTTP request failed.
+
+Status: 403
+URL: https://rpc.mainnet.chain.robinhood.com/
+Request body: {"method":"eth_call","params":[{"data":"0x1698ee82000000000000000000000000af3d76f1834a1d425780943c99ea8a608f8a93f90000000000000000000000005fc5360d0400a0fd4f2af552add042d716f1d1680000000000000000000000000000000000000000000000000000000000000bb8","to":"0x1f7d7550b1b028f7571e69a784071f0205fd2efa"},"latest"]}
+ 
+Raw Call Arguments:
+  to:    0x1f7d7550b1b028f7571e69a784071f0205fd2efa
+  data:  0x1698ee82000000000000000000000000af3d76f1834a1d425780943c99ea8a608f8a93f90000000000000000000000005fc5360d0400a0fd4f2af552add042d716f1d1680000000000000000000000000000000000000000000000000000000000000bb8
+ 
+Contract Call:
+  address:   0x1f7d7550b1b028f7571e69a784071f0205fd2efa
+  function:  getPool(address tokenA, address tokenB, uint24 fee)
+  args:             (0xaf3d76f1834a1d425780943c99ea8a608f8a93f9, 0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168, 3000)
+
+Docs: https://viem.sh/docs/contract/readContract
+Details: "Host not in allowlist: rpc.mainnet.chain.robinhood.com. Add this host to your network egress settings to allow access."
+Version: viem@2.56.3
+[FAIL] Step 5: pool GOOGL: HTTP request failed.
+
+Status: 403
+URL: https://rpc.mainnet.chain.robinhood.com/
+Request body: {"method":"eth_call","params":[{"data":"0x1698ee820000000000000000000000002e0847e8910a9732eb3fb1bb4b70a580adad4fe30000000000000000000000005fc5360d0400a0fd4f2af552add042d716f1d1680000000000000000000000000000000000000000000000000000000000000bb8","to":"0x1f7d7550b1b028f7571e69a784071f0205fd2efa"},"latest"]}
+ 
+Raw Call Arguments:
+  to:    0x1f7d7550b1b028f7571e69a784071f0205fd2efa
+  data:  0x1698ee820000000000000000000000002e0847e8910a9732eb3fb1bb4b70a580adad4fe30000000000000000000000005fc5360d0400a0fd4f2af552add042d716f1d1680000000000000000000000000000000000000000000000000000000000000bb8
+ 
+Contract Call:
+  address:   0x1f7d7550b1b028f7571e69a784071f0205fd2efa
+  function:  getPool(address tokenA, address tokenB, uint24 fee)
+  args:             (0x2e0847e8910a9732eb3fb1bb4b70a580adad4fe3, 0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168, 3000)
+
+Docs: https://viem.sh/docs/contract/readContract
+Details: "Host not in allowlist: rpc.mainnet.chain.robinhood.com. Add this host to your network egress settings to allow access."
+Version: viem@2.56.3
+[FAIL] Step 5: pool USO: HTTP request failed.
+
+Status: 403
+URL: https://rpc.mainnet.chain.robinhood.com/
+Request body: {"method":"eth_call","params":[{"data":"0x1698ee82000000000000000000000000a30fa36db767ad9ed3f7a60fc79526fb4d56d3440000000000000000000000005fc5360d0400a0fd4f2af552add042d716f1d1680000000000000000000000000000000000000000000000000000000000000bb8","to":"0x1f7d7550b1b028f7571e69a784071f0205fd2efa"},"latest"]}
+ 
+Raw Call Arguments:
+  to:    0x1f7d7550b1b028f7571e69a784071f0205fd2efa
+  data:  0x1698ee82000000000000000000000000a30fa36db767ad9ed3f7a60fc79526fb4d56d3440000000000000000000000005fc5360d0400a0fd4f2af552add042d716f1d1680000000000000000000000000000000000000000000000000000000000000bb8
+ 
+Contract Call:
+  address:   0x1f7d7550b1b028f7571e69a784071f0205fd2efa
+  function:  getPool(address tokenA, address tokenB, uint24 fee)
+  args:             (0xa30fa36db767ad9ed3f7a60fc79526fb4d56d344, 0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168, 3000)
+
+Docs: https://viem.sh/docs/contract/readContract
+Details: "Host not in allowlist: rpc.mainnet.chain.robinhood.com. Add this host to your network egress settings to allow access."
+Version: viem@2.56.3
+[FAIL] Step 5: pool SPCX: HTTP request failed.
+
+Status: 403
+URL: https://rpc.mainnet.chain.robinhood.com/
+Request body: {"method":"eth_call","params":[{"data":"0x1698ee820000000000000000000000004a0e65a3eccec6dbe60ae065f2e7bb85fae35eea0000000000000000000000005fc5360d0400a0fd4f2af552add042d716f1d1680000000000000000000000000000000000000000000000000000000000000bb8","to":"0x1f7d7550b1b028f7571e69a784071f0205fd2efa"},"latest"]}
+ 
+Raw Call Arguments:
+  to:    0x1f7d7550b1b028f7571e69a784071f0205fd2efa
+  data:  0x1698ee820000000000000000000000004a0e65a3eccec6dbe60ae065f2e7bb85fae35eea0000000000000000000000005fc5360d0400a0fd4f2af552add042d716f1d1680000000000000000000000000000000000000000000000000000000000000bb8
+ 
+Contract Call:
+  address:   0x1f7d7550b1b028f7571e69a784071f0205fd2efa
+  function:  getPool(address tokenA, address tokenB, uint24 fee)
+  args:             (0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea, 0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168, 3000)
+
+Docs: https://viem.sh/docs/contract/readContract
+Details: "Host not in allowlist: rpc.mainnet.chain.robinhood.com. Add this host to your network egress settings to allow access."
+Version: viem@2.56.3
+[FAIL] Step 5: pool HOOD: No token address or fee tier configured — unsupported.
+[FAIL] Step 6: premium/discount AAPL: Skipped — requires BOTH a live Chainlink reference AND a live secondary pool price; at least one is missing. This is the correct behavior, not a bug: no premium/discount is ever computed from a partial pair.
+[FAIL] Step 6: premium/discount GOOGL: Skipped — requires BOTH a live Chainlink reference AND a live secondary pool price; at least one is missing. This is the correct behavior, not a bug: no premium/discount is ever computed from a partial pair.
+[FAIL] Step 6: premium/discount USO: Skipped — requires BOTH a live Chainlink reference AND a live secondary pool price; at least one is missing. This is the correct behavior, not a bug: no premium/discount is ever computed from a partial pair.
+[FAIL] Step 6: premium/discount SPCX: Skipped — requires BOTH a live Chainlink reference AND a live secondary pool price; at least one is missing. This is the correct behavior, not a bug: no premium/discount is ever computed from a partial pair.
+[FAIL] Step 6: premium/discount HOOD: Skipped — requires BOTH a live Chainlink reference AND a live secondary pool price; at least one is missing. This is the correct behavior, not a bug: no premium/discount is ever computed from a partial pair.
+[FAIL] Step 7: holder concentration AAPL: Blockscout holders API returned HTTP 403 for 0xaf3d76f1834a1d425780943c99ea8a608f8a93f9
+
+=== Summary ===
+0/22 steps succeeded.
+
+Failed steps (this is the honest P0 output if run in a network-restricted sandbox):
+  - Step 2: Robinhood registry (/rhj/assets): Robinhood registry API returned HTTP 403
+  - Step 3: price AAPL: Robinhood prices API returned HTTP 403 for AAPL
+  - Step 3: price GOOGL: Robinhood prices API returned HTTP 403 for GOOGL
+  - Step 3: price USO: Robinhood prices API returned HTTP 403 for USO
+  - Step 3: price SPCX: Robinhood prices API returned HTTP 403 for SPCX
+  - Step 3: price HOOD: Robinhood prices API returned HTTP 403 for HOOD
+  - Step 4: Chainlink feed AAPL: HTTP request failed.
+
+Status: 403
+URL: https://rpc.mainnet.chain.robinhood.com/
+Request body: {"method":"eth_call","params":[{"data":"0xfeaf968c","to":"0x6B22A786bAa607d76728168703a39Ea9C99f2cD0"},"latest"]}
+ 
+Raw Call Arguments:
+  to:    0x6B22A786bAa607d76728168703a39Ea9C99f2cD0
+  data:  0xfeaf968c
+ 
+Contract Call:
+  address:   0x6B22A786bAa607d76728168703a39Ea9C99f2cD0
+  function:  latestRoundData()
+
+Docs: https://viem.sh/docs/contract/readContract
+Details: "Host not in allowlist: rpc.mainnet.chain.robinhood.com. Add this host to your network egress settings to allow access."
+Version: viem@2.56.3
+  - Step 4: Chainlink feed GOOGL: HTTP request failed.
+
+Status: 403
+URL: https://rpc.mainnet.chain.robinhood.com/
+Request body: {"method":"eth_call","params":[{"data":"0xfeaf968c","to":"0xF6f373a037c30F0e5010d854385cA89185AE638b"},"latest"]}
+ 
+Raw Call Arguments:
+  to:    0xF6f373a037c30F0e5010d854385cA89185AE638b
+  data:  0xfeaf968c
+ 
+Contract Call:
+  address:   0xF6f373a037c30F0e5010d854385cA89185AE638b
+  function:  latestRoundData()
+
+Docs: https://viem.sh/docs/contract/readContract
+Details: "Host not in allowlist: rpc.mainnet.chain.robinhood.com. Add this host to your network egress settings to allow access."
+Version: viem@2.56.3
+  - Step 4: Chainlink feed USO: HTTP request failed.
+
+Status: 403
+URL: https://rpc.mainnet.chain.robinhood.com/
+Request body: {"method":"eth_call","params":[{"data":"0x313ce567","to":"0x75a9c76Ef439e2C7c2E5a34Ab105EcFe3766431c"},"latest"]}
+ 
+Raw Call Arguments:
+  to:    0x75a9c76Ef439e2C7c2E5a34Ab105EcFe3766431c
+  data:  0x313ce567
+ 
+Contract Call:
+  address:   0x75a9c76Ef439e2C7c2E5a34Ab105EcFe3766431c
+  function:  decimals()
+
+Docs: https://viem.sh/docs/contract/readContract
+Details: "Host not in allowlist: rpc.mainnet.chain.robinhood.com. Add this host to your network egress settings to allow access."
+Version: viem@2.56.3
+  - Step 4: Chainlink feed SPCX: HTTP request failed.
+
+Status: 403
+URL: https://rpc.mainnet.chain.robinhood.com/
+Request body: {"method":"eth_call","params":[{"data":"0x313ce567","to":"0xB265810950ba6c5C0Ff821c9963014a56fD8Bffb"},"latest"]}
+ 
+Raw Call Arguments:
+  to:    0xB265810950ba6c5C0Ff821c9963014a56fD8Bffb
+  data:  0x313ce567
+ 
+Contract Call:
+  address:   0xB265810950ba6c5C0Ff821c9963014a56fD8Bffb
+  function:  decimals()
+
+Docs: https://viem.sh/docs/contract/readContract
+Details: "Host not in allowlist: rpc.mainnet.chain.robinhood.com. Add this host to your network egress settings to allow access."
+Version: viem@2.56.3
+  - Step 4: Chainlink feed HOOD: No published feed (per config provenance) — marked unsupported, not silently skipped.
+  - Step 5: pool AAPL: HTTP request failed.
+
+Status: 403
+URL: https://rpc.mainnet.chain.robinhood.com/
+Request body: {"method":"eth_call","params":[{"data":"0x1698ee82000000000000000000000000af3d76f1834a1d425780943c99ea8a608f8a93f90000000000000000000000005fc5360d0400a0fd4f2af552add042d716f1d1680000000000000000000000000000000000000000000000000000000000000bb8","to":"0x1f7d7550b1b028f7571e69a784071f0205fd2efa"},"latest"]}
+ 
+Raw Call Arguments:
+  to:    0x1f7d7550b1b028f7571e69a784071f0205fd2efa
+  data:  0x1698ee82000000000000000000000000af3d76f1834a1d425780943c99ea8a608f8a93f90000000000000000000000005fc5360d0400a0fd4f2af552add042d716f1d1680000000000000000000000000000000000000000000000000000000000000bb8
+ 
+Contract Call:
+  address:   0x1f7d7550b1b028f7571e69a784071f0205fd2efa
+  function:  getPool(address tokenA, address tokenB, uint24 fee)
+  args:             (0xaf3d76f1834a1d425780943c99ea8a608f8a93f9, 0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168, 3000)
+
+Docs: https://viem.sh/docs/contract/readContract
+Details: "Host not in allowlist: rpc.mainnet.chain.robinhood.com. Add this host to your network egress settings to allow access."
+Version: viem@2.56.3
+  - Step 5: pool GOOGL: HTTP request failed.
+
+Status: 403
+URL: https://rpc.mainnet.chain.robinhood.com/
+Request body: {"method":"eth_call","params":[{"data":"0x1698ee820000000000000000000000002e0847e8910a9732eb3fb1bb4b70a580adad4fe30000000000000000000000005fc5360d0400a0fd4f2af552add042d716f1d1680000000000000000000000000000000000000000000000000000000000000bb8","to":"0x1f7d7550b1b028f7571e69a784071f0205fd2efa"},"latest"]}
+ 
+Raw Call Arguments:
+  to:    0x1f7d7550b1b028f7571e69a784071f0205fd2efa
+  data:  0x1698ee820000000000000000000000002e0847e8910a9732eb3fb1bb4b70a580adad4fe30000000000000000000000005fc5360d0400a0fd4f2af552add042d716f1d1680000000000000000000000000000000000000000000000000000000000000bb8
+ 
+Contract Call:
+  address:   0x1f7d7550b1b028f7571e69a784071f0205fd2efa
+  function:  getPool(address tokenA, address tokenB, uint24 fee)
+  args:             (0x2e0847e8910a9732eb3fb1bb4b70a580adad4fe3, 0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168, 3000)
+
+Docs: https://viem.sh/docs/contract/readContract
+Details: "Host not in allowlist: rpc.mainnet.chain.robinhood.com. Add this host to your network egress settings to allow access."
+Version: viem@2.56.3
+  - Step 5: pool USO: HTTP request failed.
+
+Status: 403
+URL: https://rpc.mainnet.chain.robinhood.com/
+Request body: {"method":"eth_call","params":[{"data":"0x1698ee82000000000000000000000000a30fa36db767ad9ed3f7a60fc79526fb4d56d3440000000000000000000000005fc5360d0400a0fd4f2af552add042d716f1d1680000000000000000000000000000000000000000000000000000000000000bb8","to":"0x1f7d7550b1b028f7571e69a784071f0205fd2efa"},"latest"]}
+ 
+Raw Call Arguments:
+  to:    0x1f7d7550b1b028f7571e69a784071f0205fd2efa
+  data:  0x1698ee82000000000000000000000000a30fa36db767ad9ed3f7a60fc79526fb4d56d3440000000000000000000000005fc5360d0400a0fd4f2af552add042d716f1d1680000000000000000000000000000000000000000000000000000000000000bb8
+ 
+Contract Call:
+  address:   0x1f7d7550b1b028f7571e69a784071f0205fd2efa
+  function:  getPool(address tokenA, address tokenB, uint24 fee)
+  args:             (0xa30fa36db767ad9ed3f7a60fc79526fb4d56d344, 0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168, 3000)
+
+Docs: https://viem.sh/docs/contract/readContract
+Details: "Host not in allowlist: rpc.mainnet.chain.robinhood.com. Add this host to your network egress settings to allow access."
+Version: viem@2.56.3
+  - Step 5: pool SPCX: HTTP request failed.
+
+Status: 403
+URL: https://rpc.mainnet.chain.robinhood.com/
+Request body: {"method":"eth_call","params":[{"data":"0x1698ee820000000000000000000000004a0e65a3eccec6dbe60ae065f2e7bb85fae35eea0000000000000000000000005fc5360d0400a0fd4f2af552add042d716f1d1680000000000000000000000000000000000000000000000000000000000000bb8","to":"0x1f7d7550b1b028f7571e69a784071f0205fd2efa"},"latest"]}
+ 
+Raw Call Arguments:
+  to:    0x1f7d7550b1b028f7571e69a784071f0205fd2efa
+  data:  0x1698ee820000000000000000000000004a0e65a3eccec6dbe60ae065f2e7bb85fae35eea0000000000000000000000005fc5360d0400a0fd4f2af552add042d716f1d1680000000000000000000000000000000000000000000000000000000000000bb8
+ 
+Contract Call:
+  address:   0x1f7d7550b1b028f7571e69a784071f0205fd2efa
+  function:  getPool(address tokenA, address tokenB, uint24 fee)
+  args:             (0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea, 0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168, 3000)
+
+Docs: https://viem.sh/docs/contract/readContract
+Details: "Host not in allowlist: rpc.mainnet.chain.robinhood.com. Add this host to your network egress settings to allow access."
+Version: viem@2.56.3
+  - Step 5: pool HOOD: No token address or fee tier configured — unsupported.
+  - Step 6: premium/discount AAPL: Skipped — requires BOTH a live Chainlink reference AND a live secondary pool price; at least one is missing. This is the correct behavior, not a bug: no premium/discount is ever computed from a partial pair.
+  - Step 6: premium/discount GOOGL: Skipped — requires BOTH a live Chainlink reference AND a live secondary pool price; at least one is missing. This is the correct behavior, not a bug: no premium/discount is ever computed from a partial pair.
+  - Step 6: premium/discount USO: Skipped — requires BOTH a live Chainlink reference AND a live secondary pool price; at least one is missing. This is the correct behavior, not a bug: no premium/discount is ever computed from a partial pair.
+  - Step 6: premium/discount SPCX: Skipped — requires BOTH a live Chainlink reference AND a live secondary pool price; at least one is missing. This is the correct behavior, not a bug: no premium/discount is ever computed from a partial pair.
+  - Step 6: premium/discount HOOD: Skipped — requires BOTH a live Chainlink reference AND a live secondary pool price; at least one is missing. This is the correct behavior, not a bug: no premium/discount is ever computed from a partial pair.
+  - Step 7: holder concentration AAPL: Blockscout holders API returned HTTP 403 for 0xaf3d76f1834a1d425780943c99ea8a608f8a93f9
+
+If every failure above reads 'host not in allowlist' or a fetch/network error, this is the sandbox's egress policy, not a reconnaissance contradiction. Re-run from a network-unrestricted environment before treating any ticker as live-verified.

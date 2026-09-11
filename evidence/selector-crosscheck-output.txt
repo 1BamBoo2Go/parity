@@ -1,0 +1,14 @@
+MATCH  latestRoundData()                      ours=0xfeaf968c viem=0xfeaf968c
+MATCH  decimals()                             ours=0x313ce567 viem=0x313ce567
+MATCH  uiMultiplier()                         ours=0xa60bf13d viem=0xa60bf13d
+MATCH  oraclePaused()                         ours=0x7706ba52 viem=0x7706ba52
+MATCH  newUIMultiplier()                      ours=0xdc767007 viem=0xdc767007
+MATCH  effectiveAt()                          ours=0x97a4064f viem=0x97a4064f
+MATCH  getPool(address,address,uint24)        ours=0x1698ee82 viem=0x1698ee82
+MATCH  slot0()                                ours=0x3850c7bd viem=0x3850c7bd
+MATCH  token0()                               ours=0x0dfe1681 viem=0x0dfe1681
+MATCH  token1()                               ours=0xd21220a7 viem=0xd21220a7
+MATCH  totalSupply()                          ours=0x18160ddd viem=0x18160ddd
+MATCH  balanceOf(address)                     ours=0x70a08231 viem=0x70a08231
+
+All selectors independently agree between js-sha3 and viem.

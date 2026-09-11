@@ -1,0 +1,15 @@
+signature -> 4-byte selector (independently computed via js-sha3 keccak256)
+--------------------------------------------------------------------------------
+latestRoundData()                        0xfeaf968c
+decimals()                               0x313ce567
+uiMultiplier()                           0xa60bf13d
+oraclePaused()                           0x7706ba52
+newUIMultiplier()                        0xdc767007
+effectiveAt()                            0x97a4064f
+getPool(address,address,uint24)          0x1698ee82
+slot0()                                  0x3850c7bd
+token0()                                 0x0dfe1681
+token1()                                 0xd21220a7
+decimals()                               0x313ce567
+totalSupply()                            0x18160ddd
+balanceOf(address)                       0x70a08231

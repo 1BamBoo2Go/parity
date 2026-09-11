@@ -1,0 +1,66 @@
+This file records the external live run that satisfied Slice P1.2b's
+acceptance requirement, as reported by the operator running
+`npm run snapshot` twice on a network-unrestricted VPS. This is a
+transcription of that report, not a capture from a tool Claude executed
+directly — same convention as the p0/p1 external-pass files in this
+directory. No credentials of any kind appear in this file.
+
+=== First run ===
+- registry captured: true
+- gas captured: true
+- ticker snapshots: 6
+- no run-level errors
+- all six supported tickers (AAPL, GOOGL, USO, SPCX, TSLA, NVDA) persisted
+  their verified configuredPoolAddress (none null)
+- Robinhood registry/price paths worked live
+- Chainlink references worked live
+- normalized secondary prices were sane
+- holder concentration succeeded where Blockscout responded
+- Blockscout failures, where they occurred, were correctly persisted as
+  unavailable/upstream_error — never fabricated as zero
+- premium/discount correctly remained unavailable/stale, because the U.S.
+  equity market was closed for Labor Day (Sept. 7, 2026) and the latest
+  Chainlink equity references dated from Friday, Sept. 4 — i.e. the
+  existing 48-hour staleness rule (src/domain/calc.ts, carried over
+  unchanged from Slice P0) correctly fired against a real market closure,
+  not a bug.
+
+First-run counts: 1 gas, 1 registry, 6 ticker — 8 total.
+
+=== Second run ===
+runId: 04620a2e-4ae8-4c6b-92e5-78561e7b8234
+
+Counts after second run: 2 gas-snapshots, 2 registry-snapshots,
+12 ticker-snapshots — 16 total.
+
+Unique ticker run IDs present in ticker-snapshots.jsonl after the second run:
+  6 x 04620a2e-4ae8-4c6b-92e5-78561e7b8234
+  6 x 07a0badd-e5e0-4600-8bfd-a315329f7912
+
+=== What this proves ===
+- Durable append behavior (line counts exactly doubled; nothing overwritten).
+- Distinct run IDs per invocation, correctly attributable.
+- No overwrite / read-modify-rewrite corruption between runs.
+- Exactly six ticker records per run, matching the six-ticker supported
+  invariant.
+- Partial upstream failure tolerance (Blockscout failures on some tickers
+  did not affect any other field, on any other ticker, in either run).
+- Honest unavailable/stale semantics under a real market-closure condition,
+  not a synthetic test case.
+- Persisted, non-null provenance (configuredPoolAddress) for all six
+  promoted tickers.
+
+P1.2b live-proof acceptance requirement: SATISFIED.
+
+=== A calibration observation worth carrying forward (not acted on in this slice) ===
+The 48-hour staleness threshold correctly fired over a long weekend (market
+closed Friday through Monday). Worth noting for future work: an ORDINARY
+two-day weekend (Friday close to Monday open, no holiday) is already close
+to 48 hours by itself, and Chainlink's tokenized-equity feeds carry no
+off-hours heartbeat per Slice P0's own research — meaning this same
+"stale" classification will likely fire on most ordinary weekends, not just
+holidays. That is arguably correct behavior (the reference genuinely isn't
+current), but it means "premium/discount unavailable" will be a frequent,
+expected weekend state once a dashboard exists, not a rare edge case. No
+change was made in this slice; this is a data point for whoever scopes the
+next one.

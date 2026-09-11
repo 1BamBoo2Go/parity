@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Parity — Robinhood Chain Stock Token Intelligence</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">◆</span>
+      <span class="brand-name">Parity</span>
+      <span class="brand-sub">Robinhood Chain Stock Token intelligence</span>
+    </div>
+    <div class="topbar-meta">
+      <span id="global-refresh-note" class="muted">Loading…</span>
+    </div>
+  </header>
+
+  <main id="app">
+    <!-- GRID VIEW -->
+    <section id="grid-view" class="view">
+      <div class="view-heading">
+        <h1>Is this Stock Token still trading at parity?</h1>
+        <p class="muted">Reference price vs. observed secondary-market price, for every supported ticker. Data is read from the most recent captured snapshot — not fetched live on page load.</p>
+      </div>
+      <div id="grid-table-wrap">
+        <table id="grid-table" class="data-table">
+          <thead>
+            <tr>
+              <th>Ticker</th>
+              <th>Status</th>
+              <th>Reference</th>
+              <th>Secondary (USDG)</th>
+              <th>Premium / Discount</th>
+              <th>Risk</th>
+              <th>Holder Concentration (top10)</th>
+              <th>Last Update</th>
+            </tr>
+          </thead>
+          <tbody id="grid-table-body">
+            <tr><td colspan="8" class="muted center">Loading snapshot data…</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="legend">
+        <span class="badge tone-green">Healthy / current</span>
+        <span class="badge tone-amber">Stale / paused / halted</span>
+        <span class="badge tone-red">Upstream unavailable</span>
+        <span class="badge tone-gray">No data yet</span>
+      </div>
+    </section>
+
+    <!-- DETAIL VIEW -->
+    <section id="detail-view" class="view" hidden>
+      <button id="back-to-grid" class="link-button">&larr; Back to overview</button>
+      <div class="view-heading">
+        <h1 id="detail-symbol">—</h1>
+        <span id="detail-status-badge" class="badge">—</span>
+      </div>
+
+      <div class="detail-grid">
+        <div class="panel">
+          <h2>Parity</h2>
+          <dl class="kv">
+            <dt>Reference price</dt><dd id="detail-reference">—</dd>
+            <dt>Secondary price (USDG)</dt><dd id="detail-secondary">—</dd>
+            <dt>Premium / discount</dt><dd id="detail-premium">—</dd>
+            <dt>Risk (dislocation intelligence)</dt><dd id="detail-intelligence">—</dd>
+          </dl>
+        </div>
+
+        <div class="panel">
+          <h2>Market state</h2>
+          <dl class="kv">
+            <dt>Robinhood price/state</dt><dd id="detail-rh-price">—</dd>
+            <dt>Oracle status</dt><dd id="detail-oracle">—</dd>
+            <dt>Robinhood asset status</dt><dd id="detail-asset-status">—</dd>
+          </dl>
+        </div>
+
+        <div class="panel">
+          <h2>Identity &amp; addresses</h2>
+          <dl class="kv">
+            <dt>Canonical token address</dt><dd id="detail-token-address" class="mono">—</dd>
+            <dt>Configured verified pool</dt><dd id="detail-pool-address" class="mono">—</dd>
+          </dl>
+        </div>
+
+        <div class="panel">
+          <h2>Holder concentration</h2>
+          <dl class="kv">
+            <dt>Top 1</dt><dd id="detail-top1">—</dd>
+            <dt>Top 5</dt><dd id="detail-top5">—</dd>
+            <dt>Top 10</dt><dd id="detail-top10">—</dd>
+          </dl>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>History</h2>
+        <div class="chart-tabs">
+          <button class="chart-tab active" data-series="referencePrice">Reference</button>
+          <button class="chart-tab" data-series="secondaryPrice">Secondary</button>
+          <button class="chart-tab" data-series="premiumDiscountPct">Premium/Discount %</button>
+        </div>
+        <div id="history-chart-wrap">
+          <svg id="history-chart" viewBox="0 0 900 260" preserveAspectRatio="none" role="img" aria-label="History chart"></svg>
+        </div>
+        <p class="muted small">Gaps in the line are honest — they mean the underlying value was unavailable at that point in time, not zero.</p>
+      </div>
+
+      <div class="panel">
+        <h2>Provenance</h2>
+        <table class="data-table" id="provenance-table">
+          <thead><tr><th>Field</th><th>Status</th><th>Source</th><th>Detail</th></tr></thead>
+          <tbody id="provenance-table-body"></tbody>
+        </table>
+        <p class="muted small">Last snapshot: <span id="detail-last-update">—</span></p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span class="muted small">Parity V1 — read-only dashboard over already-verified, already-tested data paths. No trading, no recommendations.</span>
+  </footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>

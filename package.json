@@ -1,0 +1,35 @@
+{
+  "name": "parity",
+  "version": "0.1.0-p0",
+  "description": "Independent Robinhood Chain Stock Token parity (reference vs secondary-market price) intelligence. Buildathon v0 slice P0: live data-path proof.",
+  "type": "module",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "build": "tsc",
+    "selectors": "tsx scripts/computeSelectors.ts",
+    "prove:p0": "tsx scripts/proveP0.ts",
+    "snapshot": "tsx scripts/captureSnapshot.ts",
+    "dashboard": "tsx scripts/serveDashboard.ts"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.4.1",
+    "@types/supertest": "^7.2.1",
+    "eslint": "^10.10.0",
+    "js-sha3": "^0.13.0",
+    "supertest": "^7.2.2",
+    "tsx": "^4.23.13",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.69.0",
+    "vitest": "^5.0.0"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "viem": "^2.56.3"
+  }
+}

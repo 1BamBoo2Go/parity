@@ -1,0 +1,89 @@
+This file records the external live verification that satisfied Slice P2's
+acceptance requirement, as reported by the operator running the packaged
+`parity-p2-worktree.tar.gz` on a real VPS. This is a transcription of that
+report, not a capture from a tool Claude executed directly — same
+convention as the P0/P1/P1.2b external-pass files in this directory. No
+credentials of any kind appear in this file.
+
+=== Gates (re-run externally against the packaged archive) ===
+- typecheck: PASS
+- tests: 15 files, 151/151 PASS
+- lint: PASS
+- build: PASS
+
+=== Live snapshot capture (npm run snapshot) ===
+- registry captured
+- gas context captured
+- 6 ticker snapshots written
+- no run-level errors
+
+Observed live premium/discount values:
+  AAPL   +0.6804%
+  GOOGL  +0.8420%
+  USO    -0.0931%
+  SPCX   +1.0143%
+  TSLA   +0.3289%
+  NVDA   +0.3277%
+
+=== Dashboard — overview/grid ===
+- dashboard started successfully on the VPS, accessed through an SSH
+  tunnel at localhost:3000
+- overview rendered exactly six supported tickers
+- real reference/secondary/premium data displayed
+- both positive and negative premium/discount values rendered correctly
+  (sign preservation confirmed — see USO below)
+- last-update timestamps displayed
+- status displayed explicitly
+- no page/render failures observed
+
+=== Dashboard — detail view (AAPL) ===
+Rendered sections, all present and populated:
+- parity (reference/secondary/premium)
+- market state
+- canonical token address
+- configured verified pool address
+- holder concentration (top1/top5/top10)
+- history UI
+- provenance
+- last snapshot timestamp
+
+=== Partial-failure proof (TSLA) ===
+TSLA's Blockscout holder-concentration call failed on this run. Externally
+observed rendering:
+- top1 = unavailable
+- top5 = unavailable
+- top10 = unavailable
+- NOT zero, anywhere
+- the TSLA detail page remained fully functional
+- reference/secondary/premium remained available and correct
+- the provenance table correctly identified holder concentration as
+  unavailable, and preserved the underlying Blockscout failure detail
+- the partial upstream failure did not degrade or block any other data on
+  the page
+
+=== API proof (GET /api/tickers) ===
+Returned structured, read-only JSON matching what the dashboard rendered.
+Examples externally inspected:
+
+  AAPL:  referencePrice=318.53021158  secondaryPrice=320.69762699722037
+         premiumDiscountPct=+0.6804426514111048  holderTop10=80.2715
+
+  GOOGL: referencePrice=337.57  secondaryPrice=340.4123157051957
+         premiumDiscountPct=+0.8419929807730806
+
+  USO:   referencePrice=143.80171429  secondaryPrice=143.66781955546443
+         premiumDiscountPct=-0.09311066644556996
+
+Sign preservation (USO's negative premium/discount rendered correctly, not
+coerced positive or dropped) and source provenance both confirmed.
+
+=== Result ===
+P2 acceptance: SATISFIED.
+
+=== One non-blocking presentation observation (explicitly NOT actioned in this slice) ===
+The raw Blockscout failure detail string shown in the provenance table is
+visually noisy (a full error message rather than a short label). This is
+carried forward as a future UI-polish backlog item — a concise user-facing
+message with an optional expandable technical detail — and was
+deliberately NOT redesigned as part of this commit, per explicit
+instruction not to expand scope.

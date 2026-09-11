@@ -1,0 +1,62 @@
+This file records the external live run that satisfied Slice P1's
+acceptance requirement, as reported by the operator running
+`npm run prove:p0` on a network-unrestricted VPS. This is a transcription of
+that report, not a capture from a tool Claude executed directly — same
+convention as evidence/p0-external-pass-final.txt.
+
+No credentials of any kind appear in this file. The operator's report states
+the run "used the documented Blockscout API-key fallback" — i.e. Step 7
+succeeded via the BLOCKSCOUT_API_KEY-gated PRO API path documented in
+src/sources/blockscoutHolders.ts, resolving the ambiguity left open at the
+end of P0 (where it was unknown which of the two paths had succeeded). The
+key's actual value was never shared with, or seen by, Claude.
+
+=== Parity Live Ground-Truth Proof — Slice P1 external VPS run ===
+
+Step 2/3: Registry + Robinhood price/state — PASS for TSLA, NVDA, MSFT, SPY, QQQ.
+  (All five P1 candidates are genuinely live, registered, actively-traded
+  Stock Tokens — the gaps below are specifically about Chainlink feed and
+  pool evidence, not about whether the tickers exist.)
+
+TSLA — FULL PASS
+  Chainlink reference:      353.98495
+  Uniswap V3 secondary:     355.46367279607864 USDG
+  premiumDiscountPct:       +0.4177%
+
+NVDA — FULL PASS
+  Chainlink reference:      230.23665
+  Uniswap V3 secondary:     232.50803644288797 USDG
+  premiumDiscountPct:       +0.9865%
+
+MSFT — NOT PROMOTED
+  registry + Robinhood price: PASS
+  Chainlink feed: no verified feed (research gap, as documented pre-run)
+  pool: no verified pool
+
+SPY — NOT PROMOTED
+  registry + Robinhood price: PASS
+  Uniswap V3 pool: real USDG pool VERIFIED live
+  Chainlink feed: no verified feed (research gap, as documented pre-run)
+  premium/discount: NOT computed — correctly withheld, since only one half
+    of the gate (the pool) is verified; this is the harness behaving
+    exactly as designed, not a partial or estimated result being shown.
+
+QQQ — NOT PROMOTED
+  registry + Robinhood price: PASS
+  Chainlink feed: no verified feed
+  pool: no verified pool
+
+P0 regression check: AAPL, GOOGL, USO, SPCX, and HOOD all remained healthy
+  (no change in their behavior from this slice's edits).
+
+Holder concentration (AAPL, unchanged target from P0):
+  holderRows=10
+  top1=40.56%  top5=68.80%  top10=78.97%
+  (Note: these percentages differ slightly from P0's own final run —
+  40.48%/69.09%/79.03% — consistent with real holder composition shifting
+  slightly between the two external runs, not a bug in either run.)
+
+=== Summary ===
+39 ok / 13 unsupported (expected) / 0 real failures, out of 52 total steps.
+
+P1 live-proof acceptance requirement: SATISFIED.

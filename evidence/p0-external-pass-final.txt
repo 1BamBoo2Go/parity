@@ -1,0 +1,37 @@
+This file records the final external live run that satisfied P0's acceptance
+requirement, as reported by the operator running `npm run prove:p0` on a
+network-unrestricted VPS. This is a transcription of that report, not a
+capture from a tool Claude executed directly — unlike the sandbox-attempt
+files in this directory, which were captured verbatim from this
+environment's own (network-blocked) runs.
+
+No credentials of any kind appear in this file. If a BLOCKSCOUT_API_KEY was
+used to satisfy Step 7 via the PRO API fallback path (src/sources/
+blockscoutHolders.ts), that is a detail of the operator's own environment
+and was not reported to, or captured by, Claude — see P0-EVIDENCE-REPORT.md
+Section 8 for the honest statement of what is and isn't known about which
+of the two Blockscout paths succeeded.
+
+=== Parity P0 Live Ground-Truth Proof (external VPS, final run) ===
+
+Step 2: Robinhood registry (/rhj/assets) — OK — 194 assets fetched live.
+Step 3: Robinhood price/state — OK for all P0-supported tickers (AAPL, GOOGL, USO, SPCX).
+Step 3: price HOOD — UNSUPPORTED (HTTP 404, matching HOOD's known-unsupported config — not a system failure).
+Step 4: Chainlink feed reads — OK — live feeds for AAPL, GOOGL, USO, SPCX.
+Step 5: Uniswap V3 secondary markets — OK — live pools resolved; ERC-20 decimals/orientation correctly normalized for all four.
+
+Step 6: premium/discount (final live values):
+  AAPL   reference=320.51633525   secondary=321.1390728396434    premiumDiscountPct=+0.1943%
+  GOOGL  reference=338.275        secondary=340.01692099851067   premiumDiscountPct=+0.5149%
+  USO    reference=141.77675      secondary=144.30070003901912   premiumDiscountPct=+1.7802%
+  SPCX   reference=147.9597       secondary=150.8038864314329    premiumDiscountPct=+1.9223%
+
+Step 7: holder concentration — OK — AAPL
+  holderRows=10
+  totalSupply=17631423122920000000000
+  top1=40.48%  top5=69.09%  top10=79.03%
+
+=== Summary ===
+22 ok / 5 unsupported (expected) / 0 real failures, out of 27 total steps.
+
+P0 live-proof acceptance requirement: SATISFIED.
