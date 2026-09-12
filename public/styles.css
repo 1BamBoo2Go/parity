@@ -283,38 +283,121 @@ header{border-bottom:1px solid var(--hair);position:relative;z-index:1;
 .bay-note{margin-top:20px;padding:14px 18px;border:1px solid var(--hair);border-left:2px solid var(--vi);
   border-radius:0 8px 8px 0;background:rgba(139,92,255,.06);font-family:var(--mono);font-size:12px;color:var(--t2)}
 
-/* ── D. diagnostics ── */
-.diag{display:grid;grid-template-columns:1fr 1fr;gap:0 40px}
-.diag-col{min-width:0}
-.diag-row{display:flex;align-items:baseline;justify-content:space-between;gap:20px;padding:11px 0;
-  border-bottom:1px solid rgba(139,92,255,.10);min-width:0}
-.diag-v{font-family:var(--mono);font-size:13px;color:var(--t2);text-align:right;min-width:0;overflow-wrap:anywhere}
-.diag-v.na{color:var(--t4);font-family:var(--sans);font-size:12px;letter-spacing:.08em}
-.diag-v.addr{font-size:12px;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:help}
+/* ── D. DIAGNOSTIC LANES ──────────────────────────────────────────────
+   Two deliberate lanes, each an instrument channel: numbered registration
+   header, a thin rail down the left edge, tight vertical rhythm, hairline
+   row separators. Not cards. */
+.lanes{display:grid;grid-template-columns:1fr 1fr;gap:0 44px}
+.lane{position:relative;padding-left:20px;min-width:0}
+/* channel rail + top registration tick */
+.lane::before{content:"";position:absolute;left:0;top:4px;bottom:4px;width:1px;
+  background:linear-gradient(180deg,var(--hairc),rgba(139,92,255,.14) 26%,transparent)}
+.lane::after{content:"";position:absolute;left:0;top:4px;width:9px;height:1px;background:var(--cy);opacity:.7}
 
-/* ── E. source health ── */
+.lane-hd{display:flex;align-items:baseline;gap:11px;padding-bottom:13px;margin-bottom:4px;
+  border-bottom:1px solid var(--hair)}
+.lane-idx{font:var(--micro);font-size:9px;letter-spacing:.16em;color:var(--cy);opacity:.75}
+.lane-t{font:var(--micro);font-size:9.5px;letter-spacing:.24em;color:var(--t2)}
+
+.lrow{display:flex;align-items:baseline;justify-content:space-between;gap:18px;
+  padding:13px 0;border-bottom:1px solid rgba(139,92,255,.09);min-width:0}
+.lrow-l{font:var(--micro);font-size:8.5px;letter-spacing:.2em;color:var(--t4);white-space:nowrap}
+.lrow-v{font-family:var(--mono);font-size:15px;color:var(--tx);letter-spacing:-.02em;
+  text-align:right;min-width:0;overflow-wrap:anywhere}
+.lrow-v.na{font-family:var(--sans);font-size:12px;letter-spacing:.12em;color:var(--t4)}
+.lrow-v.alert{color:var(--vi)}
+
+/* ── holder concentration: one coherent unit ── */
+.hold{padding:16px 0 4px;border-bottom:1px solid rgba(139,92,255,.09)}
+.hold-hd{display:flex;align-items:baseline;justify-content:space-between;gap:14px;margin-bottom:14px}
+.hold-state{font:var(--micro);font-size:8px;letter-spacing:.18em;color:var(--t4)}
+.hold-state.ok{color:var(--cy)}
+.hold-tiers{display:grid;grid-template-columns:repeat(3,1fr)}
+/* [hidden] vs a class-based `display` declaration are equal-specificity
+   author rules, and the author rule wins the cascade regardless of source
+   order — the browser's own `[hidden]{display:none}` UA rule does NOT
+   automatically take precedence. Without this override, JS correctly sets
+   `.hidden = true` but the element stays visually rendered as a grid.
+   This is exactly the bug: a DOM-property check (`el.hidden === true`)
+   passes while the real rendered page still shows the tiers. */
+.hold-tiers[hidden]{display:none}
+.ht{padding:0 14px;border-left:1px solid var(--hair);min-width:0}
+.ht:first-child{padding-left:0;border-left:none}
+.ht-l{display:block;font:var(--micro);font-size:8px;letter-spacing:.18em;color:var(--t5)}
+.ht-v{display:block;font-family:var(--mono);font-size:17px;color:var(--tx);letter-spacing:-.03em;margin-top:8px}
+/* Consolidated unavailable state — deliberately NOT three dashes, which
+   would read as three separate absent measurements (or worse, as zeros). */
+.hold-na[hidden]{display:none}
+.hold-na{display:flex;flex-direction:column;gap:6px;padding:14px 16px;
+  border:1px dashed rgba(255,255,255,.13);border-radius:8px;background:rgba(255,255,255,.015)}
+.hold-na-mark{width:22px;height:1px;background:var(--t4);opacity:.8}
+.hold-na-t{font-size:12.5px;color:var(--t3);letter-spacing:.02em}
+.hold-na-s{font:var(--micro);font-size:8px;letter-spacing:.16em;color:var(--t5)}
+
+/* ── token identity ── */
+.idrow{padding:14px 0;border-bottom:1px solid rgba(139,92,255,.09);min-width:0}
+.idval{display:flex;align-items:center;gap:10px;margin-top:9px;min-width:0}
+.idaddr{font-family:var(--mono);font-size:13.5px;color:var(--t2);letter-spacing:-.01em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;cursor:help}
+.idaddr.na{font-family:var(--sans);font-size:12px;letter-spacing:.12em;color:var(--t4);cursor:default}
+/* full value always present in the DOM and selectable, never hidden from
+   copy/paste or assistive tech — the truncation above is display only */
+.idfull{display:block;margin-top:7px;font-family:var(--mono);font-size:9.5px;color:var(--t5);
+  letter-spacing:0;overflow-wrap:anywhere;user-select:all;line-height:1.5}
+.idcopy{flex:none;background:transparent;border:1px solid var(--hair);border-radius:5px;
+  padding:4px 9px;cursor:pointer;color:var(--t4);font-family:var(--mono);font-size:8px;
+  letter-spacing:.18em;transition:color 160ms ease,border-color 160ms ease,background 160ms ease}
+.idcopy:hover{color:var(--cy);border-color:var(--hairc);background:rgba(34,224,255,.06)}
+.idcopy.done{color:var(--cy);border-color:var(--hairc)}
+.idcopy.fail{color:var(--vi);border-color:rgba(139,92,255,.34)}
+
+/* ── E. SOURCE HEALTH ─────────────────────────────────────────────────
+   An instrument readout: a segmented gauge beside the truthful count,
+   then compact channel rows on a shared rhythm. Not seven cards, not a
+   log table. Cyan = reporting, violet = attention, neutral = absent. */
+.hsum{display:flex;align-items:center;gap:20px;padding:0 0 22px;margin-bottom:6px;
+  border-bottom:1px solid var(--hair)}
+.hsum-gauge{display:flex;gap:3px;flex:none}
+.hsum-gauge i{width:16px;height:5px;border-radius:1px;background:rgba(255,255,255,.08)}
+.hsum-gauge i.on{background:var(--cy);box-shadow:0 0 8px rgba(34,224,255,.55)}
+.hsum-gauge i.off{background:transparent;border:1px dashed rgba(255,255,255,.20)}
+.hsum-txt{display:flex;flex-direction:column;gap:5px;min-width:0}
+.hsum-v{font-family:var(--mono);font-size:15px;color:var(--tx);letter-spacing:.06em}
+.hsum-l{font:var(--micro);font-size:8px;letter-spacing:.2em;color:var(--t5)}
+
 .health{display:flex;flex-direction:column}
-.hrow{display:grid;grid-template-columns:13px minmax(0,1.1fr) minmax(0,1.6fr);gap:16px;align-items:center;
-  padding:11px 0;border-bottom:1px solid rgba(139,92,255,.10)}
-.hdot{width:7px;height:7px;border-radius:50%;justify-self:center}
-.hdot.ok{background:var(--cy);box-shadow:0 0 8px rgba(34,224,255,.55)}
-.hdot.warn{background:var(--vi);box-shadow:0 0 8px rgba(139,92,255,.55)}
-.hdot.out{background:transparent;border:1.5px dashed var(--t4);width:9px;height:9px}
-.hname{font-size:12.5px;color:var(--t2);min-width:0;overflow-wrap:anywhere}
-.hsrc{font-family:var(--mono);font-size:10.5px;color:var(--t5);text-align:right;min-width:0;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hstate{font:var(--micro);font-size:8.5px;letter-spacing:.16em;color:var(--t4)}
-/* raw backend diagnostics: preserved verbatim, never allowed to dominate */
-.hdiag{grid-column:1/-1;margin:4px 0 2px}
-.hdiag summary{cursor:pointer;font:var(--micro);font-size:8.5px;letter-spacing:.18em;color:var(--t4);
-  list-style:none;padding:5px 0}
+.hch{border-bottom:1px solid rgba(139,92,255,.09)}
+.hch-main{display:grid;grid-template-columns:14px minmax(0,1fr) auto;gap:14px;align-items:center;padding:12px 0}
+.hdot{width:6px;height:6px;border-radius:50%;justify-self:center}
+.hdot.ok{background:var(--cy);box-shadow:0 0 7px rgba(34,224,255,.6)}
+.hdot.out{background:transparent;border:1px dashed var(--t4);width:9px;height:9px}
+.hch-name{font-size:13px;color:var(--t2);min-width:0;overflow-wrap:anywhere}
+.hch-state{font:var(--micro);font-size:8px;letter-spacing:.18em;color:var(--t5);white-space:nowrap}
+.hch-state.ok{color:var(--cy);opacity:.85}
+.hch-state.out{color:var(--vi)}
+.hch-src{grid-column:2/-1;font-family:var(--mono);font-size:10px;color:var(--t5);
+  margin-top:-6px;padding-bottom:10px;overflow-wrap:anywhere;line-height:1.5}
+
+/* ── RAW DIAGNOSTIC — a deliberate Parity disclosure, not a default
+      <details> widget. Semantics unchanged: collapsed, verbatim, selectable. */
+.hdiag{grid-column:1/-1;margin:0 0 12px}
+.hdiag summary{display:flex;align-items:center;gap:10px;cursor:pointer;list-style:none;
+  padding:7px 11px;border:1px solid var(--hair);border-left:2px solid var(--vi);border-radius:0 6px 6px 0;
+  background:rgba(139,92,255,.05);font:var(--micro);font-size:8px;letter-spacing:.2em;color:var(--t3);
+  transition:color 160ms ease,background 160ms ease,border-color 160ms ease}
 .hdiag summary::-webkit-details-marker{display:none}
-.hdiag summary::before{content:"\25B8 ";color:var(--vi)}
-.hdiag[open] summary::before{content:"\25BE "}
-.hdiag summary:hover{color:var(--t2)}
-.hdiag pre{margin:8px 0 4px;padding:14px 16px;background:rgba(3,3,10,.55);border:1px solid var(--hair);
-  border-radius:8px;font-family:var(--mono);font-size:11px;line-height:1.6;color:var(--t3);
-  white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;max-height:260px;overflow:auto}
+.hdiag summary::marker{content:""}
+.hdiag summary:hover{color:var(--t2);background:rgba(139,92,255,.09);border-color:rgba(139,92,255,.30)}
+/* chevron drawn in CSS so the control reads as instrument chrome */
+.hdiag summary::before{content:"";width:5px;height:5px;flex:none;
+  border-right:1px solid var(--vi);border-bottom:1px solid var(--vi);
+  transform:rotate(-45deg) translate(-1px,-1px);transition:transform 200ms ease}
+.hdiag[open] summary::before{transform:rotate(45deg) translate(-1px,-1px)}
+.hdiag summary .hdiag-n{margin-left:auto;color:var(--t5);letter-spacing:.14em}
+.hdiag pre{margin:0;padding:15px 17px;background:rgba(3,3,10,.6);border:1px solid var(--hair);
+  border-top:none;border-radius:0 0 6px 6px;font-family:var(--mono);font-size:11px;line-height:1.65;
+  color:var(--t3);white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;
+  max-height:280px;overflow:auto}
 
 .badge{display:inline-flex;align-items:center;gap:7px;padding:4px 11px;border-radius:999px;
   font:var(--micro);font-size:9.5px;letter-spacing:.14em;border:1px solid var(--hair);

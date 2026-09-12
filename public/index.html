@@ -118,27 +118,88 @@
 
     <!-- ── D. MARKET / TOKEN DIAGNOSTICS ────────────────────────── -->
     <section class="bay-sec">
-      <div class="bay-hd"><span class="micro">Market &amp; token diagnostics</span></div>
-      <div class="diag">
-        <div class="diag-col">
-          <div class="diag-row"><span class="micro">Oracle</span><span class="diag-v" id="detail-oracle">&mdash;</span></div>
-          <div class="diag-row"><span class="micro">Asset status</span><span class="diag-v" id="detail-asset-status">&mdash;</span></div>
-          <div class="diag-row"><span class="micro">Holder top 1</span><span class="diag-v" id="detail-top1">&mdash;</span></div>
-          <div class="diag-row"><span class="micro">Holder top 5</span><span class="diag-v" id="detail-top5">&mdash;</span></div>
-          <div class="diag-row"><span class="micro">Holder top 10</span><span class="diag-v" id="detail-top10">&mdash;</span></div>
+      <div class="bay-hd"><span class="micro">Market &amp; token diagnostics</span>
+        <span class="micro" id="diag-state">&mdash;</span></div>
+
+      <div class="lanes">
+        <!-- lane 1: market state -->
+        <div class="lane">
+          <div class="lane-hd"><span class="lane-idx">01</span><span class="lane-t">Market state</span></div>
+
+          <div class="lrow">
+            <span class="lrow-l">Oracle</span>
+            <span class="lrow-v" id="detail-oracle">&mdash;</span>
+          </div>
+          <div class="lrow">
+            <span class="lrow-l">Asset status</span>
+            <span class="lrow-v" id="detail-asset-status">&mdash;</span>
+          </div>
+
+          <!-- holder concentration: one coherent unit, three truthful readings -->
+          <div class="hold" id="hold-block">
+            <div class="hold-hd">
+              <span class="lrow-l">Holder concentration</span>
+              <span class="hold-state" id="hold-state">&mdash;</span>
+            </div>
+            <div class="hold-tiers" id="hold-tiers">
+              <div class="ht"><span class="ht-l">Top 1</span><span class="ht-v" id="detail-top1">&mdash;</span></div>
+              <div class="ht"><span class="ht-l">Top 5</span><span class="ht-v" id="detail-top5">&mdash;</span></div>
+              <div class="ht"><span class="ht-l">Top 10</span><span class="ht-v" id="detail-top10">&mdash;</span></div>
+            </div>
+            <div class="hold-na" id="hold-na" hidden>
+              <span class="hold-na-mark" aria-hidden="true"></span>
+              <span class="hold-na-t">No holder measurement available</span>
+              <span class="hold-na-s">Tiers cannot be reported &middot; this is not zero</span>
+            </div>
+          </div>
         </div>
-        <div class="diag-col">
-          <div class="diag-row"><span class="micro">Canonical token</span><span class="diag-v addr" id="detail-token-address">&mdash;</span></div>
-          <div class="diag-row"><span class="micro">Verified pool</span><span class="diag-v addr" id="detail-pool-address">&mdash;</span></div>
+
+        <!-- lane 2: token identity -->
+        <div class="lane">
+          <div class="lane-hd"><span class="lane-idx">02</span><span class="lane-t">Token identity</span></div>
+
+          <div class="idrow" id="idrow-token">
+            <span class="lrow-l">Canonical token</span>
+            <div class="idval">
+              <span class="idaddr" id="detail-token-address">&mdash;</span>
+              <button type="button" class="idcopy" id="copy-token" hidden
+                      aria-label="Copy full canonical token address">
+                <span class="idcopy-t">COPY</span>
+              </button>
+            </div>
+            <span class="idfull" id="detail-token-full"></span>
+          </div>
+
+          <div class="idrow" id="idrow-pool">
+            <span class="lrow-l">Verified pool</span>
+            <div class="idval">
+              <span class="idaddr" id="detail-pool-address">&mdash;</span>
+              <button type="button" class="idcopy" id="copy-pool" hidden
+                      aria-label="Copy full verified pool address">
+                <span class="idcopy-t">COPY</span>
+              </button>
+            </div>
+            <span class="idfull" id="detail-pool-full"></span>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- ── E. PROVENANCE / DATA HEALTH ──────────────────────────── -->
+    <!-- ── E. SOURCE HEALTH ─────────────────────────────────────── -->
     <section class="bay-sec">
-      <div class="bay-hd"><span class="micro">Source health</span><span class="micro" id="health-summary">&mdash;</span></div>
+      <div class="bay-hd"><span class="micro">Source health</span></div>
+
+      <div class="hsum">
+        <div class="hsum-gauge" id="health-gauge" aria-hidden="true"></div>
+        <div class="hsum-txt">
+          <span class="hsum-v" id="health-summary">&mdash;</span>
+          <span class="hsum-l">Provenance channels</span>
+        </div>
+      </div>
+
       <div class="health" id="provenance-table-body"></div>
     </section>
+
 
   </section>
 </main>

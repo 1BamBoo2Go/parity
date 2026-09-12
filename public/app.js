@@ -504,6 +504,103 @@ function renderIntelligenceBay(intelDetail) {
   }
 }
 
+/**
+ * Token / pool identity.
+ *
+ * The truncated form is DISPLAY ONLY. The full exact address is always
+ * present in the DOM (selectable, user-select:all), in the title
+ * attribute, and is what the copy affordance writes to the clipboard.
+ * No explorer links are invented — Parity does not know the correct
+ * explorer for this chain from the contract.
+ */
+function renderIdentity(shortId, fullId, copyId, value) {
+  const shortEl = document.getElementById(shortId);
+  const fullEl = document.getElementById(fullId);
+  const btn = document.getElementById(copyId);
+  if (!shortEl) return;
+
+  if (!value) {
+    shortEl.className = "idaddr na";
+    shortEl.textContent = "unavailable";
+    shortEl.removeAttribute("title");
+    if (fullEl) fullEl.textContent = "";
+    if (btn) btn.hidden = true;
+    return;
+  }
+
+  shortEl.className = "idaddr";
+  shortEl.textContent = value.length > 22 ? `${value.slice(0, 12)}\u2026${value.slice(-10)}` : value;
+  shortEl.title = value;
+  if (fullEl) fullEl.textContent = value;
+
+  if (!btn) return;
+  btn.hidden = false;
+  const label = btn.querySelector(".idcopy-t");
+  btn.onclick = async () => {
+    const reset = () => {
+      btn.className = "idcopy";
+      if (label) label.textContent = "COPY";
+    };
+    try {
+      // Clipboard API requires a secure context. localhost counts as
+      // secure, so the SSH-tunnelled review works; plain-HTTP non-local
+      // origins do not, hence the explicit fallback below.
+      if (!navigator.clipboard || !navigator.clipboard.writeText) throw new Error("clipboard unavailable");
+      await navigator.clipboard.writeText(value); // full exact value, never the truncation
+      btn.className = "idcopy done";
+      if (label) label.textContent = "COPIED";
+      setTimeout(reset, 1600);
+    } catch {
+      // Graceful degradation: select the full value so the user can copy
+      // it manually. The address is never made inaccessible.
+      btn.className = "idcopy fail";
+      if (label) label.textContent = "SELECT";
+      if (fullEl && window.getSelection && document.createRange) {
+        const range = document.createRange();
+        range.selectNodeContents(fullEl);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+      setTimeout(reset, 2400);
+    }
+  };
+}
+
+/**
+ * Holder concentration.
+ *
+ * Available  -> three truthful tier readings (Top 1 / 5 / 10), unchanged.
+ * Unavailable -> ONE consolidated state. Deliberately not three dashes,
+ *                which would read as three separate absent measurements.
+ *                Explicitly states it is not zero.
+ */
+function renderHolderConcentration(hc) {
+  const tiers = document.getElementById("hold-tiers");
+  const na = document.getElementById("hold-na");
+  const state = document.getElementById("hold-state");
+  const has = (v) => typeof v === "number" && Number.isFinite(v);
+
+  const available = hc && (has(hc.top1Pct) || has(hc.top5Pct) || has(hc.top10Pct));
+
+  if (tiers) tiers.hidden = !available;
+  if (na) na.hidden = !!available;
+  if (state) {
+    state.className = available ? "hold-state ok" : "hold-state";
+    state.textContent = available ? "REPORTING" : "UNAVAILABLE";
+  }
+
+  const tier = (id, v) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    // A real 0 is a legitimate reading and must render as 0.00%.
+    el.textContent = has(v) ? `${v.toFixed(2)}%` : "\u2014";
+  };
+  tier("detail-top1", hc && hc.top1Pct);
+  tier("detail-top5", hc && hc.top5Pct);
+  tier("detail-top10", hc && hc.top10Pct);
+}
+
 async function loadDetail(symbol) {
   document.getElementById("detail-symbol").textContent = symbol;
   try {
@@ -560,58 +657,31 @@ async function loadDetail(symbol) {
     const oracle = detail.oraclePausedField;
     const oracleEl = document.getElementById("detail-oracle");
     if (oracle && oracle.value !== null && oracle.value !== undefined) {
-      oracleEl.className = "diag-v";
+      oracleEl.className = oracle.value ? "lrow-v alert" : "lrow-v";
       oracleEl.textContent = oracle.value ? "PAUSED" : "ACTIVE";
     } else {
-      oracleEl.className = "diag-v na";
+      oracleEl.className = "lrow-v na";
       oracleEl.textContent = "unavailable";
     }
 
     const asEl = document.getElementById("detail-asset-status");
     const asVal = detail.robinhoodAssetStatus && detail.robinhoodAssetStatus.value;
     if (asVal) {
-      // Long composite status string: show the leading token, keep the full
-      // value verbatim in the title attribute.
-      asEl.className = "diag-v addr";
+      // Long composite status string: leading token displayed, full value
+      // preserved verbatim in the title attribute.
+      asEl.className = "lrow-v";
       asEl.textContent = String(asVal).split(" ")[0];
       asEl.title = String(asVal);
     } else {
-      asEl.className = "diag-v na";
+      asEl.className = "lrow-v na";
       asEl.textContent = "unavailable";
       asEl.removeAttribute("title");
     }
 
-    const addr = (id, value) => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      if (value) {
-        el.className = "diag-v addr";
-        el.textContent = `${value.slice(0, 10)}\u2026${value.slice(-8)}`;
-        el.title = value;
-      } else {
-        el.className = "diag-v na";
-        el.textContent = "unavailable";
-        el.removeAttribute("title");
-      }
-    };
-    addr("detail-token-address", detail.canonicalTokenAddress);
-    addr("detail-pool-address", detail.configuredPoolAddress);
+    renderIdentity("detail-token-address", "detail-token-full", "copy-token", detail.canonicalTokenAddress);
+    renderIdentity("detail-pool-address", "detail-pool-full", "copy-pool", detail.configuredPoolAddress);
 
-    const hc = detail.holderConcentration || {};
-    const holder = (id, v) => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      if (typeof v === "number" && Number.isFinite(v)) {
-        el.className = "diag-v";
-        el.textContent = `${v.toFixed(2)}%`;
-      } else {
-        el.className = "diag-v na";
-        el.textContent = "unavailable";
-      }
-    };
-    holder("detail-top1", hc.top1Pct);
-    holder("detail-top5", hc.top5Pct);
-    holder("detail-top10", hc.top10Pct);
+    renderHolderConcentration(detail.holderConcentration);
 
     // ── E. source health ──
     renderProvenanceTable(detail.provenance || []);
@@ -652,61 +722,95 @@ function renderDetailNotFound(symbol, err) {
  *   · No green. Healthy uses cyan; degraded uses violet; absent uses a
  *     dashed neutral marker.
  */
+/**
+ * Source health (D1.1). An instrument health readout, not a status table.
+ *
+ * Truthfulness rules — unchanged from D1:
+ *   · All provenance entries are represented, none collapsed or omitted.
+ *   · No backend diagnostic is reworded into a claim the contract does not
+ *     support. The state label says only that the field is unavailable.
+ *   · The raw diagnostic is preserved VERBATIM behind a collapsed
+ *     disclosure, set via textContent so it is never interpreted.
+ *   · No green. Reporting = cyan, unavailable = violet/neutral. Direction
+ *     colours (premium/discount) are never reused as health indicators.
+ */
 function renderProvenanceTable(rows) {
   const host = document.getElementById("provenance-table-body");
   if (!host) return;
   host.textContent = "";
 
   let healthy = 0;
+
   for (const row of rows) {
     const ok = row.status === "ok";
     if (ok) healthy++;
 
-    const wrap = document.createElement("div");
-    wrap.className = "hrow";
+    // One coherent channel unit per source.
+    const ch = document.createElement("div");
+    ch.className = "hch";
+
+    const main = document.createElement("div");
+    main.className = "hch-main";
 
     const dot = document.createElement("span");
-    dot.className = "hdot " + (ok ? "ok" : row.detail ? "out" : "warn");
+    dot.className = "hdot " + (ok ? "ok" : "out");
     dot.setAttribute("aria-hidden", "true");
 
     const name = document.createElement("span");
-    name.className = "hname";
+    name.className = "hch-name";
     name.textContent = row.field;
 
-    const src = document.createElement("span");
-    src.className = "hsrc";
-    src.textContent = row.source || "";
-    src.title = row.source || "";
+    const state = document.createElement("span");
+    state.className = "hch-state " + (ok ? "ok" : "out");
+    // States only what the contract supports — never "unreachable".
+    state.textContent = ok ? "REPORTING" : "UNAVAILABLE";
 
-    wrap.append(dot, name, src);
-    host.appendChild(wrap);
+    main.append(dot, name, state);
+    ch.appendChild(main);
 
-    if (!ok) {
-      const state = document.createElement("div");
-      state.className = "hrow";
-      const spacer = document.createElement("span");
-      const label = document.createElement("span");
-      label.className = "hstate";
-      // Summary states only what the contract supports.
-      label.textContent = `${row.field.toUpperCase()} UNAVAILABLE`;
-      state.append(spacer, label);
-      host.appendChild(state);
-
-      if (row.detail) {
-        const det = document.createElement("details");
-        det.className = "hdiag";
-        const sum = document.createElement("summary");
-        sum.textContent = "RAW DIAGNOSTIC";
-        const pre = document.createElement("pre");
-        // Verbatim. textContent, so the string is never interpreted.
-        pre.textContent = row.detail;
-        det.append(sum, pre);
-        host.appendChild(det);
-      }
+    if (row.source) {
+      const src = document.createElement("span");
+      src.className = "hch-src";
+      src.textContent = row.source;
+      ch.appendChild(src);
     }
+
+    if (!ok && row.detail) {
+      const det = document.createElement("details");
+      det.className = "hdiag";
+
+      const sum = document.createElement("summary");
+      const sumLabel = document.createElement("span");
+      sumLabel.textContent = "RAW DIAGNOSTIC";
+      const sumN = document.createElement("span");
+      sumN.className = "hdiag-n";
+      // Character count is a measured fact about the string, not a summary
+      // of its meaning.
+      sumN.textContent = `${row.detail.length} CHARS`;
+      sum.append(sumLabel, sumN);
+
+      const pre = document.createElement("pre");
+      pre.textContent = row.detail; // verbatim, never parsed
+
+      det.append(sum, pre);
+      ch.appendChild(det);
+    }
+
+    host.appendChild(ch);
   }
 
-  setText("health-summary", `${healthy} of ${rows.length} sources reporting`);
+  // Summary readout + gauge, both derived from the same real counts.
+  setText("health-summary", `${healthy} OF ${rows.length} SOURCES REPORTING`);
+
+  const gauge = document.getElementById("health-gauge");
+  if (gauge) {
+    gauge.textContent = "";
+    for (const row of rows) {
+      const seg = document.createElement("i");
+      seg.className = row.status === "ok" ? "on" : "off";
+      gauge.appendChild(seg);
+    }
+  }
 }
 
 function renderChart(history, seriesKey) {
