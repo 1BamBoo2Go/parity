@@ -193,6 +193,12 @@ header{border-bottom:1px solid var(--hair);position:relative;z-index:1;
 /* ── Unavailable states (real data only) ──────────────────────────────
    A deviation that is genuinely unknown is never placed at 0.00% and
    never implies parity. It leaves the field entirely. */
+/* [hidden] vs a class-based `display` declaration are equal-specificity
+   author rules; the author rule wins the cascade regardless of source
+   order in real browsers, so JS setting `.hidden = true` alone does not
+   guarantee the element disappears. Same proven fix pattern as
+   .hold-tiers[hidden] / .hold-na[hidden] (P4-D1.1). */
+.offfield[hidden]{display:none}
 .offfield{margin-top:22px;padding-top:16px;border-top:1px solid var(--hair);
   display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .offchip{display:inline-flex;align-items:center;gap:9px;padding:6px 13px;border-radius:999px;
@@ -494,8 +500,28 @@ header{border-bottom:1px solid var(--hair);position:relative;z-index:1;
   .dx-dev{font-size:30px}
   .bay-grid{grid-template-columns:1fr}
   .ib{padding-left:0;border-left:none;padding-bottom:16px}
-  .hrow{grid-template-columns:13px 1fr}
-  .hsrc{display:none}
+  /* Market & Token Diagnostics: stack the two lanes so each gets the full
+     available width. Root cause of the reported defect: the two lanes
+     never actually shared a column at any width — .lanes has no
+     responsive rule at all (the only pre-existing "narrow" rule in this
+     area, .diag{grid-template-columns:1fr} inside the 900px block,
+     targets a class that does not exist anywhere in the DOM; it is dead,
+     left over from before D1.1's rename to .lanes, and was never doing
+     anything). At half-width, a value like ASSET_STATUS_ACTIVE had to
+     break character-by-character to avoid overflow; at full width it
+     fits as a coherent value without needing to. */
+  .lanes{grid-template-columns:1fr}
+  .lane+.lane{margin-top:26px}
+  /* Defensive only: at full lane width no current real value is long
+     enough to trigger this, but if the label+value combination ever
+     cannot share one line, wrap onto a new line at a word/underscore
+     boundary rather than force character-level splitting. Does not
+     alter today's rendering of ASSET_STATUS_ACTIVE or any other value. */
+  .lrow{flex-wrap:wrap}
+  .lrow-v{overflow-wrap:break-word}
+  .hch-main{grid-template-columns:13px minmax(0,1fr);grid-template-rows:auto auto;row-gap:3px}
+  .hch-state{grid-column:2;grid-row:2;justify-self:start;margin-top:0}
+  .hch-src{display:none}
 }
 
 /* ── Interaction affordance (P4 integration fix) ──────────────────────

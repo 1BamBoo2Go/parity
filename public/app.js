@@ -332,9 +332,9 @@ async function loadGrid() {
     const ageMin = latest ? (Date.now() - new Date(latest).getTime()) / 60000 : Infinity;
     if (dot) dot.style.animationPlayState = ageMin <= 45 ? "running" : "paused";
     if (label) label.textContent = ageMin <= 45 ? "FIELD ACTIVE" : "FIELD STALE";
-  } catch (err) {
+  } catch {
     setText("dm", "FIELD UNAVAILABLE");
-    setText("deck-state", `Could not load: ${String(err)}`);
+    setText("deck-state", "SIGNAL UNAVAILABLE \u2014 RETRY");
   }
 }
 
@@ -362,12 +362,6 @@ function badge(status) {
 }
 
 /** Detail-view helpers (used by the preserved detail/chart code below). */
-function fmtPct(value) {
-  if (value === null || value === undefined) return DASH;
-  const cls = value >= 0 ? "pct-positive" : "pct-negative";
-  return `<span class="${cls}">${fmtSignedPct(value, 4)}</span>`;
-}
-
 function fieldOrDash(field, formatter) {
   if (!field || field.value === null || field.value === undefined) return DASH;
   return formatter ? formatter(field.value) : String(field.value);
