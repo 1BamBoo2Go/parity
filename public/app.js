@@ -813,53 +813,108 @@ function renderProvenanceTable(rows) {
   }
 }
 
+const SVGNS = "http://www.w3.org/2000/svg";
+
+function svgNode(name, attrs) {
+  const el = document.createElementNS(SVGNS, name);
+  for (const [k, v] of Object.entries(attrs || {})) el.setAttribute(k, String(v));
+  return el;
+}
+
+function chartMessage(svg, message) {
+  const t = svgNode("text", { x: 450, y: 128, "text-anchor": "middle", class: "hc-msg" });
+  t.textContent = message;
+  svg.appendChild(t);
+}
+
+/** Short axis-time label. Falls back to the raw string if unparseable. */
+function fmtAxisTime(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return String(iso || "");
+  return d.toISOString().slice(5, 16).replace("T", " ") + "Z";
+}
+
+/** Human label for a series key, used in the chart's aria-label. */
+function seriesLabel(seriesKey) {
+  if (seriesKey === "premiumDiscountPct") return "premium/discount deviation";
+  if (seriesKey === "secondaryPrice") return "on-chain price";
+  return "reference price";
+}
+
+// Deterministic clip-path id per series — stable across rerenders of the
+// same chart, never Math.random(). Two charts on the same page (should
+// that ever happen) would still collide, which is an acceptable, documented
+// constraint for a single-chart detail view.
+function clipIdFor(seriesKey) {
+  return `hc-clip-${seriesKey}`;
+}
+
+/**
+ * Historical signal instrument (P4-D2).
+ *
+ * TRUTHFULNESS — unchanged from D1/D1.1, restated because this is the
+ * function that actually enforces it:
+ *   · Segments break at EVERY null/undefined value. A gap is never bridged,
+ *     interpolated, smoothed, or zero-filled.
+ *   · An isolated sample surrounded by gaps renders as a dot, never a line.
+ *   · Pointer AND keyboard inspection report "UNAVAILABLE" for a null
+ *     sample rather than snapping to a neighbouring real value — a gap
+ *     must be discoverable by inspecting it, not hidden by interpolation.
+ *   · The deviation series' domain always includes 0.00% so the parity
+ *     line is genuinely positioned, never assumed or drawn at an edge.
+ *   · Direction colour (cyan/magenta) is applied ONLY to the deviation
+ *     series. Reference/on-chain price series use neutral/violet
+ *     instrument styling — they carry no premium/discount meaning, so
+ *     they must not borrow that colour language.
+ */
 function renderChart(history, seriesKey) {
   const svg = document.getElementById("history-chart");
+  if (!svg) return;
   svg.innerHTML = "";
+  svg.setAttribute("role", "img");
+  svg.setAttribute("tabindex", "0");
 
   const points = (history && history.points) || [];
   if (points.length === 0) {
-    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    text.setAttribute("x", "450");
-    text.setAttribute("y", "130");
-    text.setAttribute("text-anchor", "middle");
-    text.setAttribute("fill", "#8b93a3");
-    text.setAttribute("font-size", "13");
-    text.textContent = "No history captured yet for this ticker.";
-    svg.appendChild(text);
+    chartMessage(svg, "No history captured yet for this ticker.");
+    svg.setAttribute("aria-label", `${seriesLabel(seriesKey)}: no history captured yet.`);
     return;
   }
 
   const width = 900;
   const height = 260;
-  const padding = { top: 16, right: 16, bottom: 28, left: 60 };
+  const padding = { top: 22, right: 22, bottom: 36, left: 66 };
+  const plotBottom = height - padding.bottom;
 
   const values = points.map((p) => p[seriesKey]).filter((v) => v !== null && v !== undefined);
   if (values.length === 0) {
-    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    text.setAttribute("x", "450");
-    text.setAttribute("y", "130");
-    text.setAttribute("text-anchor", "middle");
-    text.setAttribute("fill", "#8b93a3");
-    text.setAttribute("font-size", "13");
-    text.textContent = "No available values for this series in the captured history (all gaps).";
-    svg.appendChild(text);
+    chartMessage(svg, "No available values for this series in the captured history (all gaps).");
+    svg.setAttribute("aria-label", `${seriesLabel(seriesKey)}: every captured observation is unavailable.`);
     return;
   }
 
+  const isDeviation = seriesKey === "premiumDiscountPct";
+
   let min = Math.min(...values);
   let max = Math.max(...values);
+  // A deviation chart is meaningless without parity in view. Reference and
+  // on-chain series are NOT forced to include 0 — a $0 price has no
+  // relevance to those series and forcing it would distort the domain.
+  if (isDeviation) { min = Math.min(min, 0); max = Math.max(max, 0); }
   if (min === max) {
     min -= Math.abs(min) * 0.01 || 1;
     max += Math.abs(max) * 0.01 || 1;
   }
+  const pad = (max - min) * 0.08;
+  min -= pad; max += pad;
   const yRange = max - min;
 
   const xFor = (i) => padding.left + (i / Math.max(points.length - 1, 1)) * (width - padding.left - padding.right);
   const yFor = (v) => padding.top + (1 - (v - min) / yRange) * (height - padding.top - padding.bottom);
 
-  // Build path segments, breaking at every null/undefined value — this is
-  // the actual mechanism that prevents fabricated continuity across gaps.
+  // ── Segment construction — breaks at every null. Each point carries its
+  // pixel position AND its real value; the value is needed downstream to
+  // colour the deviation trace by true sign, not just to plot position. ──
   const segments = [];
   let current = [];
   points.forEach((p, i) => {
@@ -869,51 +924,243 @@ function renderChart(history, seriesKey) {
       current = [];
       return;
     }
-    current.push([xFor(i), yFor(v)]);
+    current.push([xFor(i), yFor(v), v]);
   });
   if (current.length > 0) segments.push(current);
 
-  const svgNS = "http://www.w3.org/2000/svg";
+  const fmtVal = (v) => (isDeviation ? fmtSignedPct(v, 4) : v.toFixed(2));
 
-  // Axis line
-  const axis = document.createElementNS(svgNS, "line");
-  axis.setAttribute("x1", String(padding.left));
-  axis.setAttribute("y1", String(height - padding.bottom));
-  axis.setAttribute("x2", String(width - padding.right));
-  axis.setAttribute("y2", String(height - padding.bottom));
-  axis.setAttribute("stroke", "#232936");
-  svg.appendChild(axis);
+  // ── graduations ──
+  const grid = svgNode("g", {});
+  const ticks = 4;
+  for (let i = 0; i <= ticks; i++) {
+    const v = min + (yRange * i) / ticks;
+    const y = yFor(v);
+    grid.appendChild(svgNode("line", { class: "hc-grid", x1: padding.left, y1: y, x2: width - padding.right, y2: y }));
+    const lab = svgNode("text", { class: "hc-ylab", x: padding.left - 10, y: y + 3.5, "text-anchor": "end" });
+    lab.textContent = fmtVal(v);
+    grid.appendChild(lab);
+  }
+  svg.appendChild(grid);
 
-  // Y-axis labels (min/max only — kept simple, dense-but-readable)
-  [min, max].forEach((v) => {
-    const label = document.createElementNS(svgNS, "text");
-    label.setAttribute("x", "4");
-    label.setAttribute("y", String(yFor(v) + 4));
-    label.setAttribute("fill", "#8b93a3");
-    label.setAttribute("font-size", "10");
-    label.setAttribute("font-family", "monospace");
-    label.textContent = v.toFixed(seriesKey === "premiumDiscountPct" ? 3 : 2);
-    svg.appendChild(label);
-  });
+  // registration ticks along the left edge — measurement feel, not data
+  for (let i = 0; i <= ticks * 2; i++) {
+    const y = padding.top + ((height - padding.top - padding.bottom) * i) / (ticks * 2);
+    grid.appendChild(svgNode("line", { class: "hc-reg", x1: padding.left - 4, y1: y, x2: padding.left, y2: y }));
+  }
 
+  // ── parity reference line — deviation series only ──
+  const zeroY = yFor(0);
+  if (isDeviation && zeroY >= padding.top && zeroY <= plotBottom) {
+    svg.appendChild(svgNode("line", { class: "hc-zero-halo", x1: padding.left, y1: zeroY, x2: width - padding.right, y2: zeroY }));
+    svg.appendChild(svgNode("line", { class: "hc-zero", x1: padding.left, y1: zeroY, x2: width - padding.right, y2: zeroY }));
+    const zl = svgNode("text", { class: "hc-zlab", x: width - padding.right, y: zeroY - 8, "text-anchor": "end" });
+    zl.textContent = "0.00% PARITY";
+    svg.appendChild(zl);
+  }
+
+  // ── directional area fill — deviation series only. Cyan above parity
+  // (premium), magenta below (discount). Geometry-derived: the fill is
+  // built from the SAME segment paths used to draw the line, clipped
+  // against the real zero-Y, so a zero crossing can never be misrepresented
+  // by a guessed classification. Reference/on-chain never reach this
+  // branch — they carry no premium/discount meaning. ──
+  if (isDeviation) {
+    const clipId = clipIdFor(seriesKey);
+    const clip = svgNode("clipPath", { id: clipId });
+    for (const seg of segments) {
+      if (seg.length < 2) continue;
+      const d =
+        seg.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`).join(" ") +
+        ` L${seg[seg.length - 1][0].toFixed(2)},${zeroY.toFixed(2)} L${seg[0][0].toFixed(2)},${zeroY.toFixed(2)} Z`;
+      clip.appendChild(svgNode("path", { d }));
+    }
+    svg.appendChild(clip);
+    const g = svgNode("g", { "clip-path": `url(#${clipId})` });
+    g.appendChild(svgNode("rect", { class: "hc-fill-p", x: padding.left, y: padding.top, width: width - padding.left - padding.right, height: Math.max(0, zeroY - padding.top) }));
+    g.appendChild(svgNode("rect", { class: "hc-fill-d", x: padding.left, y: zeroY, width: width - padding.left - padding.right, height: Math.max(0, plotBottom - zeroY) }));
+    svg.appendChild(g);
+  }
+
+  // ── signal — direction-tinted by true value, deviation mode only.
+  // Reference/on-chain stay neutral. A run of the line is coloured cyan
+  // (premium) or magenta (discount) based on the REAL sign of each point,
+  // never by a segment's starting or ending value alone. Where a segment
+  // crosses zero, it is split into two runs at the exact geometric
+  // crossing — found by linear interpolation IN VALUE-SPACE between the
+  // two bracketing points. This is exact, not approximate: yFor() is
+  // affine in v, so the fraction of the way from one point's value to the
+  // other's zero-crossing is identical to the fraction of the way along
+  // the straight pixel segment between them. The same principle the
+  // directional fill already uses for its clip-path, applied to the line. ──
   for (const seg of segments) {
     if (seg.length === 1) {
-      // A single isolated point with gaps on both sides — draw a dot, not a line.
-      const circle = document.createElementNS(svgNS, "circle");
-      circle.setAttribute("cx", String(seg[0][0]));
-      circle.setAttribute("cy", String(seg[0][1]));
-      circle.setAttribute("r", "2.5");
-      circle.setAttribute("fill", "#5fb0ff");
-      svg.appendChild(circle);
+      const [x, y, v] = seg[0];
+      const dotClass = isDeviation ? `hc-dot${v >= 0 ? "" : " d"}` : "hc-dot hc-dot-neutral";
+      svg.appendChild(svgNode("circle", { class: dotClass, cx: x, cy: y, r: 2.6 }));
       continue;
     }
-    const d = seg.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`).join(" ");
-    const path = document.createElementNS(svgNS, "path");
-    path.setAttribute("d", d);
-    path.setAttribute("fill", "none");
-    path.setAttribute("stroke", "#5fb0ff");
-    path.setAttribute("stroke-width", "1.75");
-    svg.appendChild(path);
+
+    if (!isDeviation) {
+      const d = seg.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`).join(" ");
+      svg.appendChild(svgNode("path", { class: "hc-line hc-line-neutral", d }));
+      continue;
+    }
+
+    let run = [seg[0]];
+    let currentSign = seg[0][2] >= 0;
+    const flush = () => {
+      if (run.length < 2) return;
+      const cls = currentSign ? "hc-line" : "hc-line d";
+      const d = run.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`).join(" ");
+      svg.appendChild(svgNode("path", { class: cls, d }));
+    };
+    for (let k = 1; k < seg.length; k++) {
+      const [xa, , va] = seg[k - 1];
+      const [xb, , vb] = seg[k];
+      const signB = vb >= 0;
+      if (signB === currentSign) {
+        run.push(seg[k]);
+        continue;
+      }
+      // True zero crossing between two real, opposite-sign observations —
+      // never invented, never guessed: exact linear interpolation between
+      // the two actual sampled values.
+      const t = Math.abs(va) / (Math.abs(va) + Math.abs(vb));
+      const xc = xa + t * (xb - xa);
+      run.push([xc, zeroY, 0]);
+      flush();
+      currentSign = signB;
+      run = [[xc, zeroY, 0], seg[k]];
+    }
+    flush();
+  }
+
+  // ── axes ──
+  svg.appendChild(svgNode("line", { class: "hc-axis", x1: padding.left, y1: plotBottom, x2: width - padding.right, y2: plotBottom }));
+  const first = points[0], last = points[points.length - 1];
+  const t0 = svgNode("text", { class: "hc-xlab", x: padding.left, y: height - 12, "text-anchor": "start" });
+  t0.textContent = fmtAxisTime(first && first.timestamp);
+  const t1 = svgNode("text", { class: "hc-xlab", x: width - padding.right, y: height - 12, "text-anchor": "end" });
+  t1.textContent = fmtAxisTime(last && last.timestamp);
+  svg.append(t0, t1);
+  const nCap = svgNode("text", { class: "hc-xlab", x: (padding.left + width - padding.right) / 2, y: height - 12, "text-anchor": "middle" });
+  nCap.textContent = `${points.length} OBSERVATIONS`;
+  svg.appendChild(nCap);
+
+  // ── accessible summary (role=img requires a real description) ──
+  const availableCount = values.length;
+  const rangeLabel = isDeviation
+    ? `ranging ${fmtVal(min + pad)} to ${fmtVal(max - pad)}`
+    : `ranging ${fmtVal(min + pad)} to ${fmtVal(max - pad)}`;
+  svg.setAttribute(
+    "aria-label",
+    `${seriesLabel(seriesKey)} over ${points.length} observations, ${availableCount} available, ${rangeLabel}. ` +
+      `Use arrow keys or pointer to inspect individual observations.`,
+  );
+
+  // ── inspection layer (pointer AND keyboard share this exact function —
+  // there is only one truth-reporting code path, not two that could drift). ──
+  const insp = svgNode("g", { class: "hc-insp", opacity: 0 });
+  const cross = svgNode("line", { class: "hc-cross", x1: 0, y1: padding.top, x2: 0, y2: plotBottom });
+  const focus = svgNode("circle", { class: "hc-focus", cx: 0, cy: 0, r: 4 });
+  const tipBg = svgNode("rect", { class: "hc-tip", x: 0, y: 0, width: 166, height: 40, rx: 7 });
+  const tipT = svgNode("text", { class: "hc-tipt", x: 0, y: 0 });
+  const tipV = svgNode("text", { class: "hc-tipv", x: 0, y: 0 });
+  insp.append(cross, focus, tipBg, tipT, tipV);
+  svg.appendChild(insp);
+
+  // Live region for screen readers — updated on every inspected index so
+  // keyboard users hear the same fact a sighted pointer user sees. This
+  // lives OUTSIDE the SVG deliberately: role="img" flattens all SVG
+  // children out of the accessibility tree, so an in-SVG <title> would
+  // set the graphic's accessible name once but would NOT reliably
+  // re-announce on update. #chart-live is a real aria-live region in the
+  // surrounding HTML (see index.html) for exactly that reason.
+  const live = document.getElementById("chart-live");
+
+  const hit = svgNode("rect", {
+    x: padding.left, y: padding.top,
+    width: width - padding.left - padding.right,
+    height: plotBottom - padding.top,
+    fill: "transparent", style: "cursor:crosshair",
+  });
+  svg.appendChild(hit);
+
+  let focusedIndex = points.length - 1;
+
+  const inspect = (i) => {
+    i = Math.max(0, Math.min(points.length - 1, i));
+    focusedIndex = i;
+    const p = points[i];
+    const v = p[seriesKey];
+    const x = xFor(i);
+    const available = v !== null && v !== undefined;
+
+    cross.setAttribute("x1", x); cross.setAttribute("x2", x);
+    if (available) {
+      focus.setAttribute("cx", x);
+      focus.setAttribute("cy", yFor(v));
+      focus.setAttribute("opacity", "1");
+      focus.setAttribute("class", isDeviation ? `hc-focus ${v >= 0 ? "p" : "d"}` : "hc-focus hc-focus-neutral");
+    } else {
+      focus.setAttribute("opacity", "0");
+    }
+
+    const tw = 166;
+    const tx = Math.min(Math.max(x - tw / 2, padding.left), width - padding.right - tw);
+    const ty = padding.top + 4;
+    tipBg.setAttribute("x", tx); tipBg.setAttribute("y", ty);
+    tipBg.setAttribute("width", tw);
+    tipT.setAttribute("x", tx + 11); tipT.setAttribute("y", ty + 16);
+    tipV.setAttribute("x", tx + 11); tipV.setAttribute("y", ty + 32);
+    tipT.textContent = fmtAxisTime(p.timestamp);
+    // A null sample says so. It never borrows a neighbour's value — that
+    // would hide the exact thing this instrument exists to show honestly.
+    tipV.textContent = available ? fmtVal(v) : "UNAVAILABLE";
+    tipV.setAttribute("class", available ? "hc-tipv" : "hc-tipv na");
+    insp.setAttribute("opacity", "1");
+
+    // Same fact, announced to assistive tech. Guarded: #chart-live may be
+    // absent if index.html predates this element (defensive, not expected).
+    if (live) live.textContent = `${fmtAxisTime(p.timestamp)}: ${available ? fmtVal(v) : "unavailable"}`;
+  };
+  const hide = () => insp.setAttribute("opacity", "0");
+
+  const indexFromClientX = (clientX) => {
+    const box = svg.getBoundingClientRect ? svg.getBoundingClientRect() : null;
+    if (!box || !box.width) return null;
+    const localX = ((clientX - box.left) / box.width) * width;
+    const step = (width - padding.left - padding.right) / Math.max(points.length - 1, 1);
+    return Math.round((localX - padding.left) / step);
+  };
+
+  if (hit.addEventListener) {
+    hit.addEventListener("pointermove", (e) => {
+      const i = indexFromClientX(e.clientX);
+      if (i !== null) inspect(i);
+    });
+    hit.addEventListener("pointerdown", (e) => {
+      const i = indexFromClientX(e.clientX);
+      if (i !== null) inspect(i);
+    });
+    hit.addEventListener("pointerleave", hide);
+  }
+
+  // Keyboard inspection: same inspect() function, same truth semantics.
+  // ArrowLeft/ArrowRight step one observation at a time; Home/End jump to
+  // the ends. Unavailable samples are reported exactly as pointer
+  // inspection reports them — nothing is skipped or bridged.
+  if (svg.addEventListener) {
+    svg.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft") { e.preventDefault(); inspect(focusedIndex - 1); }
+      else if (e.key === "ArrowRight") { e.preventDefault(); inspect(focusedIndex + 1); }
+      else if (e.key === "Home") { e.preventDefault(); inspect(0); }
+      else if (e.key === "End") { e.preventDefault(); inspect(points.length - 1); }
+      else return;
+    });
+    svg.addEventListener("focus", () => inspect(focusedIndex));
+    svg.addEventListener("blur", hide);
   }
 }
 

@@ -113,6 +113,17 @@
       <div id="history-chart-wrap">
         <svg id="history-chart" viewBox="0 0 900 260" preserveAspectRatio="none" role="img" aria-label="Historical series"></svg>
       </div>
+      <!--
+        Accessibility addition (P4-D2), justified: the chart SVG uses
+        role="img", which flattens all of its children out of the
+        accessibility tree — an in-SVG <title>/<desc> sets the graphic's
+        accessible NAME once but cannot reliably re-announce on later
+        updates. Keyboard/pointer inspection needs a real aria-live region
+        to announce each inspected observation, and that region must live
+        outside the flattened SVG to be heard. This is the one index.html
+        change in this slice; visually hidden, no effect on layout.
+      -->
+      <div id="chart-live" class="sr-only" aria-live="polite"></div>
       <p class="micro dx-foot">Gaps are real &middot; the value was unavailable at that moment, never zero</p>
     </section>
 
