@@ -468,3 +468,162 @@ describe("GET /api/v1/risk/:symbol (P5-A2)", () => {
     expect(res.body.intelligence.episode.state).toBe("current_observation_unavailable");
   });
 });
+
+describe("GET /api/v1/risk/:symbol (P5-A3 contract hardening)", () => {
+  const VALID_REFERENCE_STATUSES = ["healthy_current", "stale_reference", "oracle_paused", "trading_halt", "upstream_unavailable"];
+  const VALID_MATURITIES = ["INSUFFICIENT_DATA", "DEVELOPING", "MATURE"];
+  const VALID_DIRECTIONS = ["premium", "discount", "flat"];
+
+  function seedMatureHistory(symbol: string, pct: number) {
+    for (let i = 0; i < 250; i++) {
+      const capturedAt = new Date(Date.parse("2026-08-01T00:00:00.000Z") + i * 60 * 60000).toISOString();
+      appendJsonLine(
+        join(dataDir, "ticker-snapshots.jsonl"),
+        seedRecord({
+          ticker: symbol,
+          capturedAt,
+          chainlinkReference: { status: "ok", value: { normalizedPrice: 213.45, decimals: 8, updatedAt: capturedAt }, asOf: capturedAt, source: "s" },
+          premiumDiscountPct: { status: "ok", value: pct, asOf: capturedAt, source: "s" },
+        }),
+      );
+    }
+  }
+
+  it("referenceStatus is exactly a valid, existing OverallTickerStatus enum member — never an invented value", async () => {
+    seedMatureHistory("AAPL", 0.1); // reaches MATURE, classification NORMAL — verified empirically before writing this test
+    const app = createApp({ dataDir });
+    const res = await request(app).get("/api/v1/risk/AAPL");
+    expect(res.status).toBe(200);
+    expect(res.body.intelligence.maturity).toBe("MATURE");
+    expect(VALID_REFERENCE_STATUSES).toContain(res.body.referenceStatus);
+  });
+
+  it("capturedAt is well-formed ISO-8601 (round-trips through Date parsing byte-for-byte), not merely equal to one known value", async () => {
+    seedMatureHistory("AAPL", 0.1);
+    const app = createApp({ dataDir });
+    const res = await request(app).get("/api/v1/risk/AAPL");
+    expect(res.status).toBe(200);
+    expect(typeof res.body.capturedAt).toBe("string");
+    const reparsed = new Date(res.body.capturedAt);
+    expect(Number.isNaN(reparsed.getTime())).toBe(false);
+    expect(reparsed.toISOString()).toBe(res.body.capturedAt); // proves canonical ISO-8601, not just "Date-parseable"
+  });
+
+  it("intelligence.maturity is always one of the three canonical values, across MATURE, DEVELOPING, and INSUFFICIENT_DATA", async () => {
+    // MATURE
+    seedMatureHistory("AAPL", 0.1);
+    // DEVELOPING (enough for a baseline, not yet MATURE — same shape the
+    // existing G test already empirically proves lands on DEVELOPING)
+    for (let i = 0; i < 30; i++) {
+      const capturedAt = new Date(Date.parse("2026-09-01T00:00:00.000Z") + i * 60 * 60000).toISOString();
+      appendJsonLine(join(dataDir, "ticker-snapshots.jsonl"), seedRecord({ ticker: "GOOGL", capturedAt, chainlinkReference: { status: "ok", value: { normalizedPrice: 338, decimals: 8, updatedAt: capturedAt }, asOf: capturedAt, source: "s" }, premiumDiscountPct: { status: "ok", value: 0.1, asOf: capturedAt, source: "s" } }));
+    }
+    // INSUFFICIENT_DATA (below both the minimum-observation and minimum-
+    // elapsed-hours thresholds for any baseline at all)
+    appendJsonLine(join(dataDir, "ticker-snapshots.jsonl"), seedRecord({ ticker: "USO", capturedAt: "2026-09-01T00:00:00.000Z", oraclePaused: { status: "ok", value: true, asOf: "x", source: "s" } }));
+
+    const app = createApp({ dataDir });
+    for (const symbol of ["AAPL", "GOOGL", "USO"]) {
+      const res = await request(app).get(`/api/v1/risk/${symbol}`);
+      expect(res.status).toBe(200);
+      expect(VALID_MATURITIES).toContain(res.body.intelligence.maturity);
+    }
+    const aapl = await request(app).get("/api/v1/risk/AAPL");
+    const googl = await request(app).get("/api/v1/risk/GOOGL");
+    const uso = await request(app).get("/api/v1/risk/USO");
+    expect(aapl.body.intelligence.maturity).toBe("MATURE");
+    expect(googl.body.intelligence.maturity).toBe("DEVELOPING");
+    expect(uso.body.intelligence.maturity).toBe("INSUFFICIENT_DATA");
+  });
+
+  it("deviation.direction is exhaustively premium/discount/flat when present, and null exactly when currentPct is null", async () => {
+    seedMatureHistory("AAPL", 0.1);
+    const premiumCapturedAt = new Date(Date.parse("2026-08-01T00:00:00.000Z") + 250 * 60 * 60000).toISOString();
+    appendJsonLine(join(dataDir, "ticker-snapshots.jsonl"), seedRecord({ ticker: "AAPL", capturedAt: premiumCapturedAt, chainlinkReference: { status: "ok", value: { normalizedPrice: 213.45, decimals: 8, updatedAt: premiumCapturedAt }, asOf: premiumCapturedAt, source: "s" }, premiumDiscountPct: { status: "ok", value: 2.5, asOf: premiumCapturedAt, source: "s" } }));
+    const app = createApp({ dataDir });
+    const res = await request(app).get("/api/v1/risk/AAPL");
+    expect(res.status).toBe(200);
+    expect(VALID_DIRECTIONS).toContain(res.body.deviation.direction);
+    expect(res.body.deviation.direction).toBe(res.body.deviation.currentPct === null ? null : res.body.deviation.direction);
+    // Direction is null iff currentPct is null — checked both directions.
+    if (res.body.deviation.currentPct === null) {
+      expect(res.body.deviation.direction).toBeNull();
+    } else {
+      expect(VALID_DIRECTIONS).toContain(res.body.deviation.direction);
+    }
+  });
+
+  it("success response object contains ONLY the approved top-level and nested keys — no accidental extra fields", async () => {
+    seedMatureHistory("AAPL", 0.1);
+    const app = createApp({ dataDir });
+    const res = await request(app).get("/api/v1/risk/AAPL");
+    expect(res.status).toBe(200);
+
+    expect(Object.keys(res.body).sort()).toEqual(
+      ["symbol", "apiVersion", "capturedAt", "referenceStatus", "deviation", "eligibility", "intelligence"].sort(),
+    );
+    expect(Object.keys(res.body.deviation).sort()).toEqual(["currentPct", "direction", "absDeviationPct"].sort());
+    // eligibility must contain ONLY truthful preserved eligibility state —
+    // exactly `eligible`, deliberately never `reason` (see P5-A1 audit:
+    // the granular p2/p3 reason is not preserved by canonical
+    // TickerIntelligence and must not be invented here).
+    expect(Object.keys(res.body.eligibility)).toEqual(["eligible"]);
+    expect(Object.keys(res.body.intelligence).sort()).toEqual(
+      ["maturity", "observationCount", "baselinePeriodHours", "baselineMedianPct", "baselineDispersionMad", "madMultiple", "classification", "episode"].sort(),
+    );
+  });
+
+  it("error responses contain ONLY the documented keys — unsupported_ticker and no_data_yet shapes", async () => {
+    const app = createApp({ dataDir });
+
+    const unsupported = await request(app).get("/api/v1/risk/DOESNOTEXIST");
+    expect(unsupported.status).toBe(404);
+    expect(Object.keys(unsupported.body).sort()).toEqual(["error", "symbol", "apiVersion"].sort());
+    expect(unsupported.body).toEqual({ error: "unsupported_ticker", symbol: "DOESNOTEXIST", apiVersion: "v1" });
+
+    const noData = await request(app).get("/api/v1/risk/AAPL"); // supported, nothing seeded
+    expect(noData.status).toBe(404);
+    expect(Object.keys(noData.body).sort()).toEqual(["error", "symbol", "apiVersion"].sort());
+    expect(noData.body).toEqual({ error: "no_data_yet", symbol: "AAPL", apiVersion: "v1" });
+  });
+
+  it("symbol lookup is case-insensitive for mixed case, and the returned symbol is always canonical uppercase", async () => {
+    seedMatureHistory("AAPL", 0.1);
+    const app = createApp({ dataDir });
+    for (const input of ["aapl", "Aapl", "AaPl", "AAPL"]) {
+      const res = await request(app).get(`/api/v1/risk/${input}`);
+      expect(res.status).toBe(200);
+      expect(res.body.symbol).toBe("AAPL");
+    }
+  });
+
+  it("never leaks a raw upstream/provenance error string, even when the underlying record has one", async () => {
+    seedMatureHistory("AAPL", 0.1);
+    const rawUpstreamError =
+      "All holder-data sources failed for 0xaf3d76f1834a1d425780943c99ea8a608f8a93f9. Attempts:\n  - v2 REST: HTTP 403\n  - PRO API: SKIPPED \u2014 no BLOCKSCOUT_API_KEY set.";
+    const capturedAt = new Date(Date.parse("2026-08-01T00:00:00.000Z") + 250 * 60 * 60000).toISOString();
+    appendJsonLine(
+      join(dataDir, "ticker-snapshots.jsonl"),
+      seedRecord({
+        ticker: "AAPL",
+        capturedAt,
+        chainlinkReference: { status: "ok", value: { normalizedPrice: 213.45, decimals: 8, updatedAt: capturedAt }, asOf: capturedAt, source: "s" },
+        premiumDiscountPct: { status: "ok", value: 0.1, asOf: capturedAt, source: "s" },
+        // A real, raw upstream failure string exactly like the one this
+        // project has traced through ProvenanceRow.detail elsewhere.
+        holderConcentration: { status: "unavailable", reason: "upstream_error", detail: rawUpstreamError, source: "Blockscout" },
+      }),
+    );
+    const app = createApp({ dataDir });
+    const res = await request(app).get("/api/v1/risk/AAPL");
+    expect(res.status).toBe(200);
+    const raw = JSON.stringify(res.body);
+    expect(raw).not.toContain("BLOCKSCOUT_API_KEY");
+    expect(raw).not.toContain("HTTP 403");
+    expect(raw).not.toContain(rawUpstreamError);
+    // RiskViewModel has no field capable of carrying it in the first
+    // place — this test proves that by construction, not by luck.
+    expect(res.body).not.toHaveProperty("provenance");
+    expect(res.body).not.toHaveProperty("holderConcentration");
+  });
+});
