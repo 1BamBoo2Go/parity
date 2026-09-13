@@ -1,7 +1,7 @@
 import express, { type Express, type Request, type Response } from "express";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { getGridViewModel, getDetailViewModel, getHistoryViewModelFor } from "../readmodel/dashboardReadModel.js";
+import { getGridViewModel, getDetailViewModel, getHistoryViewModelFor, getRiskViewModel } from "../readmodel/dashboardReadModel.js";
 import type { SnapshotReaderOptions } from "../readmodel/snapshotReader.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -56,6 +56,34 @@ export function createApp(readerOptions: SnapshotReaderOptions = {}): Express {
       return;
     }
     res.json(result.history);
+  });
+
+  // --- External Risk API (P5-A2) ------------------------------------------
+  // Same thin-layer discipline as every route above: this handler contains
+  // no intelligence computation of its own. getRiskViewModel() calls the
+  // one canonical buildTickerIntelligence() and P5-A1's toRiskProjection()
+  // and returns an already-finished, JSON-safe RiskViewModel — this
+  // handler only translates its result kind into an HTTP status.
+  app.get("/api/v1/risk/:symbol", (req: Request, res: Response) => {
+    const symbolParam = req.params.symbol;
+    if (typeof symbolParam !== "string") {
+      res.status(400).json({ error: "missing_symbol", apiVersion: "v1" });
+      return;
+    }
+    const result = getRiskViewModel(symbolParam.toUpperCase(), readerOptions);
+    if (result.kind === "unsupported_ticker") {
+      res.status(404).json({ error: "unsupported_ticker", symbol: symbolParam, apiVersion: "v1" });
+      return;
+    }
+    if (result.kind === "no_data_yet") {
+      // The symbol is genuinely supported/tracked; no snapshot has been
+      // captured for it yet, so there is nothing truthful to serve as a
+      // risk reading. Distinct error code from unsupported_ticker: this
+      // is "not available yet," never "will never exist here."
+      res.status(404).json({ error: "no_data_yet", symbol: symbolParam, apiVersion: "v1" });
+      return;
+    }
+    res.json(result.risk);
   });
 
   // --- Static frontend ----------------------------------------------------

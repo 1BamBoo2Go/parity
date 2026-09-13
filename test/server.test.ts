@@ -314,3 +314,157 @@ describe("GET /api/tickers and /api/tickers/:symbol — intelligence propagation
     expect(res.body.intelligenceDetail.baseline.observationCount).toBe(25);
   });
 });
+
+describe("GET /api/v1/risk/:symbol (P5-A2)", () => {
+  function seedMatureHistory(symbol: string, pct: number) {
+    for (let i = 0; i < 250; i++) {
+      const capturedAt = new Date(Date.parse("2026-08-01T00:00:00.000Z") + i * 60 * 60000).toISOString();
+      appendJsonLine(
+        join(dataDir, "ticker-snapshots.jsonl"),
+        seedRecord({
+          ticker: symbol,
+          capturedAt,
+          chainlinkReference: { status: "ok", value: { normalizedPrice: 213.45, decimals: 8, updatedAt: capturedAt }, asOf: capturedAt, source: "s" },
+          premiumDiscountPct: { status: "ok", value: pct, asOf: capturedAt, source: "s" },
+        }),
+      );
+    }
+  }
+
+  it("A/B/C. supported symbol returns HTTP 200 with apiVersion v1 and the approved RiskViewModel structure", async () => {
+    seedMatureHistory("AAPL", 0.1);
+    const app = createApp({ dataDir });
+    const res = await request(app).get("/api/v1/risk/AAPL");
+
+    expect(res.status).toBe(200);
+    expect(res.body.apiVersion).toBe("v1");
+    expect(res.body.symbol).toBe("AAPL");
+    expect(res.body).toHaveProperty("capturedAt");
+    expect(res.body).toHaveProperty("referenceStatus");
+    expect(res.body).toHaveProperty("deviation");
+    expect(res.body.deviation).toHaveProperty("currentPct");
+    expect(res.body.deviation).toHaveProperty("direction");
+    expect(res.body.deviation).toHaveProperty("absDeviationPct");
+    expect(res.body).toHaveProperty("eligibility");
+    expect(res.body.eligibility).toHaveProperty("eligible");
+    expect(res.body.eligibility).not.toHaveProperty("reason"); // deliberately absent — see P5-A1 audit
+    expect(res.body).toHaveProperty("intelligence");
+    expect(res.body.intelligence).toHaveProperty("maturity");
+    expect(res.body.intelligence).toHaveProperty("observationCount");
+    expect(res.body.intelligence).toHaveProperty("madMultiple");
+    expect(res.body.intelligence).toHaveProperty("classification");
+    expect(res.body.intelligence).toHaveProperty("episode");
+    // Never a UI label leaking into the external contract.
+    expect(res.body).not.toHaveProperty("label");
+    expect(JSON.stringify(res.body)).not.toMatch(/typical/i);
+  });
+
+  it("D. unsupported symbol returns HTTP 404 with a stable, machine-readable error, distinct from no_data_yet", async () => {
+    const app = createApp({ dataDir });
+    const res = await request(app).get("/api/v1/risk/DOESNOTEXIST");
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe("unsupported_ticker");
+    expect(res.body.symbol).toBe("DOESNOTEXIST");
+    expect(res.body.apiVersion).toBe("v1");
+  });
+
+  it("no_data_yet: a supported ticker with zero captured history returns HTTP 404 with a DIFFERENT error code than unsupported_ticker", async () => {
+    // AAPL is a genuinely supported symbol; seed nothing for it.
+    const app = createApp({ dataDir });
+    const res = await request(app).get("/api/v1/risk/AAPL");
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe("no_data_yet");
+    expect(res.body.apiVersion).toBe("v1");
+  });
+
+  it("E. symbol normalization matches existing route behavior (lowercase input still resolves)", async () => {
+    seedMatureHistory("AAPL", 0.1);
+    const app = createApp({ dataDir });
+    const res = await request(app).get("/api/v1/risk/aapl");
+    expect(res.status).toBe(200);
+    expect(res.body.symbol).toBe("AAPL");
+  });
+
+  it("F. capturedAt comes from the actual current record's own timestamp, not a derived/baseline value", async () => {
+    seedMatureHistory("AAPL", 0.1);
+    const app = createApp({ dataDir });
+    const res = await request(app).get("/api/v1/risk/AAPL");
+    // The 250th (last) seeded record's capturedAt, per seedMatureHistory's loop.
+    const expectedCapturedAt = new Date(Date.parse("2026-08-01T00:00:00.000Z") + 249 * 60 * 60000).toISOString();
+    expect(res.body.capturedAt).toBe(expectedCapturedAt);
+  });
+
+  it("G. DEVELOPING/null semantics survive HTTP JSON serialization", async () => {
+    // Only 30 observations -> DEVELOPING, not MATURE.
+    for (let i = 0; i < 30; i++) {
+      const capturedAt = new Date(Date.parse("2026-09-01T00:00:00.000Z") + i * 60 * 60000).toISOString();
+      appendJsonLine(
+        join(dataDir, "ticker-snapshots.jsonl"),
+        seedRecord({
+          ticker: "GOOGL",
+          capturedAt,
+          chainlinkReference: { status: "ok", value: { normalizedPrice: 338, decimals: 8, updatedAt: capturedAt }, asOf: capturedAt, source: "s" },
+          premiumDiscountPct: { status: "ok", value: 0.25, asOf: capturedAt, source: "s" },
+        }),
+      );
+    }
+    const app = createApp({ dataDir });
+    const res = await request(app).get("/api/v1/risk/GOOGL");
+    expect(res.status).toBe(200);
+    expect(res.body.intelligence.maturity).toBe("DEVELOPING");
+    // Current deviation is still honestly exposed while DEVELOPING...
+    expect(res.body.deviation.currentPct).toBe(0.25);
+    expect(res.body.eligibility.eligible).toBe(true);
+    // ...while every mature-only statistic serializes as real JSON null,
+    // never omitted and never coerced to 0.
+    expect(res.body.intelligence.classification).toBeNull();
+    expect(res.body.intelligence.madMultiple).toBeNull();
+    expect(res.body.intelligence.episode).toBeNull();
+    expect(res.body.intelligence).toHaveProperty("classification");
+    expect(res.body.intelligence).toHaveProperty("madMultiple");
+    expect(res.body.intelligence).toHaveProperty("episode");
+  });
+
+  it("H. exact numeric zero survives HTTP JSON serialization as 0, not null and not omitted", async () => {
+    seedMatureHistory("AAPL", 0.1);
+    const zeroCapturedAt = new Date(Date.parse("2026-08-01T00:00:00.000Z") + 250 * 60 * 60000).toISOString();
+    appendJsonLine(
+      join(dataDir, "ticker-snapshots.jsonl"),
+      seedRecord({
+        ticker: "AAPL",
+        capturedAt: zeroCapturedAt,
+        chainlinkReference: { status: "ok", value: { normalizedPrice: 213.45, decimals: 8, updatedAt: zeroCapturedAt }, asOf: zeroCapturedAt, source: "s" },
+        premiumDiscountPct: { status: "ok", value: 0, asOf: zeroCapturedAt, source: "s" },
+      }),
+    );
+    const app = createApp({ dataDir });
+    const res = await request(app).get("/api/v1/risk/AAPL");
+    expect(res.status).toBe(200);
+    expect(res.body.deviation.currentPct).toBe(0);
+    expect(res.body.deviation.absDeviationPct).toBe(0);
+    expect(res.body.deviation.direction).toBe("flat");
+    expect(res.body.eligibility.eligible).toBe(true); // zero is eligible, never confused with unavailable
+  });
+
+  it("intelligence-ineligible current observation: deviation/eligibility remain honest, no carried-forward classification", async () => {
+    seedMatureHistory("USO", 0.1);
+    const staleCapturedAt = new Date(Date.parse("2026-08-01T00:00:00.000Z") + 250 * 60 * 60000).toISOString();
+    appendJsonLine(
+      join(dataDir, "ticker-snapshots.jsonl"),
+      seedRecord({
+        ticker: "USO",
+        capturedAt: staleCapturedAt,
+        chainlinkReference: { status: "ok", value: { normalizedPrice: 213.45, decimals: 8, updatedAt: "2026-01-01T00:00:00.000Z" }, asOf: staleCapturedAt, source: "s" },
+        premiumDiscountPct: { status: "ok", value: 3.0, asOf: staleCapturedAt, source: "s" },
+      }),
+    );
+    const app = createApp({ dataDir });
+    const res = await request(app).get("/api/v1/risk/USO");
+    expect(res.status).toBe(200);
+    expect(res.body.deviation.currentPct).toBeNull();
+    expect(res.body.deviation.direction).toBeNull();
+    expect(res.body.eligibility.eligible).toBe(false);
+    expect(res.body.intelligence.classification).toBeNull();
+    expect(res.body.intelligence.episode.state).toBe("current_observation_unavailable");
+  });
+});
