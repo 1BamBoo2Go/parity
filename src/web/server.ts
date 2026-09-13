@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { getGridViewModel, getDetailViewModel, getHistoryViewModelFor, getRiskViewModel } from "../readmodel/dashboardReadModel.js";
 import type { SnapshotReaderOptions } from "../readmodel/snapshotReader.js";
+import { createRateLimiter, type RateLimiterOptions } from "./rateLimiter.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = join(__dirname, "..", "..", "public");
@@ -19,8 +20,13 @@ const MAX_HISTORY_LIMIT = 5000;
  * `dataDir` is injectable so tests can point the app at a temporary,
  * disposable snapshot directory instead of the real one.
  */
-export function createApp(readerOptions: SnapshotReaderOptions = {}): Express {
+export function createApp(readerOptions: SnapshotReaderOptions = {}, rateLimitOptions: RateLimiterOptions = {}): Express {
   const app = express();
+  // Deliberately NOT set: app.set("trust proxy", ...). See rateLimiter.ts's
+  // module doc for the full reasoning — no verified reverse proxy exists
+  // in front of this deployment today, so req.ip must keep reflecting the
+  // real TCP peer rather than a spoofable X-Forwarded-For header.
+  const riskApiRateLimiter = createRateLimiter(rateLimitOptions);
 
   // --- Read-only JSON API -----------------------------------------------
 
@@ -64,7 +70,12 @@ export function createApp(readerOptions: SnapshotReaderOptions = {}): Express {
   // one canonical buildTickerIntelligence() and P5-A1's toRiskProjection()
   // and returns an already-finished, JSON-safe RiskViewModel — this
   // handler only translates its result kind into an HTTP status.
-  app.get("/api/v1/risk/:symbol", (req: Request, res: Response) => {
+  //
+  // Rate limited (P5-A4) — the only route on this surface protected: it is
+  // the sole external-facing, versioned developer contract. The internal
+  // dashboard routes above are NOT rate limited; they serve this
+  // application's own first-party frontend, not third-party callers.
+  app.get("/api/v1/risk/:symbol", riskApiRateLimiter.middleware, (req: Request, res: Response) => {
     const symbolParam = req.params.symbol;
     if (typeof symbolParam !== "string") {
       res.status(400).json({ error: "missing_symbol", apiVersion: "v1" });

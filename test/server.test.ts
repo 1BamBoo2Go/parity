@@ -627,3 +627,112 @@ describe("GET /api/v1/risk/:symbol (P5-A3 contract hardening)", () => {
     expect(res.body).not.toHaveProperty("holderConcentration");
   });
 });
+
+describe("Rate limiting on /api/v1/risk/:symbol (P5-A4)", () => {
+  function seedOneHealthyRecord(symbol: string) {
+    appendJsonLine(
+      join(dataDir, "ticker-snapshots.jsonl"),
+      seedRecord({ ticker: symbol, capturedAt: "2026-09-12T00:00:00.000Z" }),
+    );
+  }
+
+  it("permits exactly the real default policy (60/min) then blocks the 61st request from the same client", async () => {
+    seedOneHealthyRecord("AAPL");
+    // No overrides beyond a fixed test-client key — this exercises the
+    // ACTUAL production default (DEFAULT_RATE_LIMIT_MAX_REQUESTS,
+    // DEFAULT_RATE_LIMIT_WINDOW_MS), not a scaled-down test policy. Real
+    // Date.now() is fine here: 61 sequential in-process requests complete
+    // in milliseconds, comfortably inside one real 60-second window.
+    const app = createApp({ dataDir }, { keyFn: () => "policy-check-client" });
+
+    for (let i = 0; i < 60; i++) {
+      const res = await request(app).get("/api/v1/risk/AAPL");
+      expect(res.status).toBe(200);
+    }
+    const blocked = await request(app).get("/api/v1/risk/AAPL");
+    expect(blocked.status).toBe(429);
+  });
+
+  it("429 response has the exact documented JSON contract and a truthful Retry-After header", async () => {
+    seedOneHealthyRecord("AAPL");
+    let currentMs = Date.parse("2026-09-12T00:00:00.000Z");
+    const app = createApp({ dataDir }, { maxRequests: 3, windowMs: 60_000, now: () => currentMs, keyFn: () => "client-A" });
+
+    for (let i = 0; i < 3; i++) {
+      expect((await request(app).get("/api/v1/risk/AAPL")).status).toBe(200);
+    }
+    // Advance 10s into the window before the blocked request, so the
+    // Retry-After value is a genuine, checkable computation (50s
+    // remaining), not just "some positive number."
+    currentMs += 10_000;
+    const blocked = await request(app).get("/api/v1/risk/AAPL");
+
+    expect(blocked.status).toBe(429);
+    expect(Object.keys(blocked.body).sort()).toEqual(["error", "apiVersion"].sort());
+    expect(blocked.body).toEqual({ error: "rate_limit_exceeded", apiVersion: "v1" });
+    // Never a raw internal detail (bucket state, counts, IP) leaking out.
+    expect(JSON.stringify(blocked.body)).not.toMatch(/client-A|bucket|windowStart/i);
+
+    expect(blocked.headers["retry-after"]).toBeDefined();
+    expect(blocked.headers["retry-after"]).toBe("50");
+  });
+
+  it("separate client keys are rate limited independently, without relying on any forwarded-header trust", async () => {
+    seedOneHealthyRecord("AAPL");
+    const app = createApp(
+      { dataDir },
+      {
+        maxRequests: 2,
+        windowMs: 60_000,
+        // Test-only key extractor reading a header the test controls
+        // directly — proves independent-bucket BEHAVIOR without the
+        // production code path ever trusting a forwarded-IP header.
+        keyFn: (req) => String(req.headers["x-test-client-id"] ?? "default"),
+      },
+    );
+
+    const asClient = (id: string) => request(app).get("/api/v1/risk/AAPL").set("x-test-client-id", id);
+
+    expect((await asClient("client-1")).status).toBe(200);
+    expect((await asClient("client-1")).status).toBe(200);
+    expect((await asClient("client-1")).status).toBe(429); // client-1 exhausted
+
+    // client-2 is a completely independent bucket — unaffected by client-1.
+    expect((await asClient("client-2")).status).toBe(200);
+    expect((await asClient("client-2")).status).toBe(200);
+    expect((await asClient("client-2")).status).toBe(429);
+  });
+
+  it("a bucket resets once its window fully elapses — no permanent lockout", async () => {
+    seedOneHealthyRecord("AAPL");
+    let currentMs = Date.parse("2026-09-12T00:00:00.000Z");
+    const app = createApp({ dataDir }, { maxRequests: 2, windowMs: 60_000, now: () => currentMs, keyFn: () => "client-reset" });
+
+    expect((await request(app).get("/api/v1/risk/AAPL")).status).toBe(200);
+    expect((await request(app).get("/api/v1/risk/AAPL")).status).toBe(200);
+    expect((await request(app).get("/api/v1/risk/AAPL")).status).toBe(429);
+
+    // Advance exactly past the window boundary — no real sleep involved.
+    currentMs += 60_000;
+
+    const afterReset = await request(app).get("/api/v1/risk/AAPL");
+    expect(afterReset.status).toBe(200);
+  });
+
+  it("existing internal dashboard routes are NOT rate limited, even far beyond the risk API's limit", async () => {
+    seedOneHealthyRecord("AAPL");
+    // A deliberately tiny risk-API limit, to prove /api/tickers traffic
+    // sails past it untouched — if /api/tickers were accidentally wired
+    // to the same limiter, this would start 429ing immediately.
+    const app = createApp({ dataDir }, { maxRequests: 1, keyFn: () => "shared-key-if-miswired" });
+
+    for (let i = 0; i < 10; i++) {
+      const res = await request(app).get("/api/tickers");
+      expect(res.status).toBe(200);
+    }
+    for (let i = 0; i < 10; i++) {
+      const res = await request(app).get("/api/tickers/AAPL");
+      expect(res.status).toBe(200);
+    }
+  });
+});
