@@ -22,6 +22,7 @@
  *     transactions, exactly as required.
  */
 import { captureRun } from "../src/snapshot/captureRun.js";
+import { processCaptureRunForAlerts } from "../src/alerts/processCaptureRunForAlerts.js";
 
 async function main() {
   const startedAt = new Date();
@@ -48,6 +49,24 @@ async function main() {
     const pct = record.premiumDiscountPct.status === "ok" ? `${record.premiumDiscountPct.value.toFixed(4)}%` : `unavailable (${record.premiumDiscountPct.reason})`;
     console.log(`  ${record.ticker}: premiumDiscountPct=${pct}`);
   }
+
+  // Alert processing (P5-B3) — runs strictly AFTER every snapshot above
+  // has already been durably written. Only successfully-captured tickers
+  // (result.tickerRecords) are ever considered; result.tickerErrors is
+  // never touched here. Failures here are logged loudly but, per this
+  // script's own existing convention for ordinary per-ticker capture
+  // errors, do NOT turn a successful snapshot-capture run into a failed
+  // process exit — the primary job (capturing and persisting snapshots)
+  // already succeeded by this point, regardless of what happens next.
+  const alertResult = processCaptureRunForAlerts(result);
+  if (alertResult.failures.length > 0) {
+    console.error(`[${new Date().toISOString()}] Alert processing failures this run (snapshots were still captured successfully; no alert state was advanced for these symbols):`);
+    for (const f of alertResult.failures) {
+      console.error(`    - ${f.symbol}: ${f.error}`);
+    }
+  }
+  const emittedCount = alertResult.processed.filter((p) => p.event !== null).length;
+  console.log(`  Alert events emitted this run: ${emittedCount}`);
 }
 
 main().catch((err) => {
