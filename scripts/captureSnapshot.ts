@@ -58,7 +58,7 @@ async function main() {
   // errors, do NOT turn a successful snapshot-capture run into a failed
   // process exit — the primary job (capturing and persisting snapshots)
   // already succeeded by this point, regardless of what happens next.
-  const alertResult = processCaptureRunForAlerts(result);
+  const alertResult = await processCaptureRunForAlerts(result);
   if (alertResult.failures.length > 0) {
     console.error(`[${new Date().toISOString()}] Alert processing failures this run (snapshots were still captured successfully; no alert state was advanced for these symbols):`);
     for (const f of alertResult.failures) {
