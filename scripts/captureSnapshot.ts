@@ -23,6 +23,7 @@
  */
 import { captureRun } from "../src/snapshot/captureRun.js";
 import { processCaptureRunForAlerts } from "../src/alerts/processCaptureRunForAlerts.js";
+import { selectAlertDeliveryFromEnv } from "../src/alerts/discordAlertDelivery.js";
 
 async function main() {
   const startedAt = new Date();
@@ -58,7 +59,10 @@ async function main() {
   // errors, do NOT turn a successful snapshot-capture run into a failed
   // process exit — the primary job (capturing and persisting snapshots)
   // already succeeded by this point, regardless of what happens next.
-  const alertResult = await processCaptureRunForAlerts(result);
+  // Never logs the webhook URL itself — only whether one is configured.
+  // See selectAlertDeliveryFromEnv's own doc for why.
+  console.log(`  Discord alert delivery: ${process.env.DISCORD_ALERT_WEBHOOK_URL ? "enabled" : "disabled (using structured log default)"}`);
+  const alertResult = await processCaptureRunForAlerts(result, { deliver: selectAlertDeliveryFromEnv() });
   if (alertResult.failures.length > 0) {
     console.error(`[${new Date().toISOString()}] Alert processing failures this run (snapshots were still captured successfully; no alert state was advanced for these symbols):`);
     for (const f of alertResult.failures) {
