@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>PARITY — Mini-Manifesto</title>
+<style>
+  /* ── Tokens copied verbatim from design/approved/final-neon-refined.html —
+     that file itself is never touched. Font stacks substituted for
+     print-safe system fonts (wkhtmltopdf's WebKit build does not resolve
+     Apple-specific keywords like ui-monospace/-apple-system). ────────── */
+  :root{
+    --void:#03030a; --glass:rgba(22,16,48,.55);
+    --cy:#22e0ff; --cy2:#7ff0ff; --vi:#8b5cff; --mg:#ff3fb4; --mg2:#ff8ad4;
+    --tx:#f2eeff; --t2:#a99bd0; --t3:#756796; --t4:#4e4470; --t5:#372f52;
+    --hair:rgba(139,92,255,.28); --hairc:rgba(34,224,255,.30); --hairm:rgba(255,63,180,.30);
+    --mono:"Liberation Mono","DejaVu Sans Mono",monospace;
+    --sans:"Liberation Sans","DejaVu Sans",sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{background:var(--void);color:var(--tx);font-family:var(--sans);}
+
+  .page{
+    width:816px; height:1056px; /* US Letter @ 96dpi */
+    background:var(--void);
+    position:relative;
+    overflow:hidden;
+    page-break-after:always;
+    padding:64px 72px 56px 72px;
+  }
+  .page:last-child{page-break-after:avoid;}
+
+  .micro{
+    font-family:var(--mono); font-size:9px; font-weight:700;
+    letter-spacing:.24em; text-transform:uppercase; color:var(--t4);
+  }
+
+  /* ── brand mark: the SAME motif as public/styles.css's .mk — a vertical
+     magenta -> cyan -> violet glowing bar — recreated for print at a
+     larger, still-recognizable scale. Not a new logo. ── */
+  .mark{
+    width:8px; height:56px; border-radius:4px;
+    background:linear-gradient(180deg, transparent, var(--mg) 14%, var(--cy) 50%, var(--vi) 86%, transparent);
+    box-shadow:0 0 24px rgba(34,224,255,.55), 0 0 46px rgba(139,92,255,.35);
+  }
+
+  .wordmark{
+    font-family:var(--sans); font-weight:700; font-size:30px;
+    letter-spacing:.34em; color:#fff;
+  }
+
+  .pagefoot{
+    position:absolute; left:72px; right:72px; bottom:32px;
+    display:flex; justify-content:space-between; align-items:baseline;
+    border-top:1px solid var(--hair); padding-top:14px;
+  }
+  .pagefoot .micro{color:var(--t5);}
+
+  /* ══════════════════════ PAGE 1 — COVER / THESIS ══════════════════════ */
+  #p1{display:flex; flex-direction:column; justify-content:center;}
+  #p1 .brandrow{display:flex; align-items:center; gap:22px; margin-bottom:8px;}
+  #p1 .kicker{
+    font-family:var(--mono); font-size:12px; letter-spacing:.28em; color:var(--t3);
+    text-transform:uppercase; margin:34px 0 46px 0;
+  }
+  #p1 .thesis{
+    font-family:var(--sans); font-weight:300; font-size:34px; line-height:1.32;
+    color:var(--tx); max-width:600px; margin-top:6px;
+  }
+  #p1 .thesis b{font-weight:700; color:#fff;}
+  #p1 .question{
+    margin-top:56px; padding:28px 32px; border-left:2px solid var(--cy);
+    background:rgba(34,224,255,.05);
+    font-family:var(--mono); font-size:19px; line-height:1.55; color:var(--cy2);
+    max-width:600px;
+  }
+  #p1 .subline{margin-top:40px; font-family:var(--mono); font-size:11px; letter-spacing:.1em; color:var(--t4);}
+
+  /* ══════════════════════ PAGE 2 — THE PROBLEM ══════════════════════ */
+  #p2{display:flex; flex-direction:column; justify-content:center;}
+  .h1{
+    font-family:var(--sans); font-weight:700; font-size:13px; letter-spacing:.28em;
+    text-transform:uppercase; color:var(--t2); margin-bottom:6px;
+  }
+  .h1 .idx{color:var(--vi); margin-right:10px;}
+  .h1rule{width:42px; height:1px; background:var(--cy); opacity:.7; margin-bottom:30px;}
+  .prose{font-family:var(--sans); font-size:15.5px; line-height:1.75; color:var(--t2); max-width:660px;}
+  .prose + .prose{margin-top:18px;}
+  .prose b{color:var(--tx); font-weight:700;}
+  .prose code, .prose .term{font-family:var(--mono); color:var(--tx); font-size:14px;}
+
+  .rail{
+    position:relative; height:110px; margin:44px 0 8px 0;
+    display:flex; align-items:center;
+  }
+  .rail .track{position:absolute; left:0; right:0; top:50%; height:1px; background:rgba(255,255,255,.14);}
+  .rail .origin{
+    position:absolute; left:50%; top:50%; width:2px; height:46px; margin:-23px 0 0 -1px;
+    background:var(--cy); box-shadow:0 0 16px var(--cy);
+  }
+  .rail .beam-d{position:absolute; right:50%; top:50%; height:3px; width:38%; margin-top:-1.5px;
+    background:linear-gradient(270deg, rgba(255,63,180,.15), var(--mg)); border-radius:2px;}
+  .rail .beam-p{position:absolute; left:50%; top:50%; height:3px; width:38%; margin-top:-1.5px;
+    background:linear-gradient(90deg, rgba(34,224,255,.15), var(--cy)); border-radius:2px;}
+  .rail .lbl{position:absolute; top:calc(50% + 20px); font-family:var(--mono); font-size:10px; letter-spacing:.2em;}
+  .rail .lbl.d{left:12%; color:var(--mg);}
+  .rail .lbl.p{right:12%; color:var(--cy);}
+  .rail .lbl.o{left:50%; transform:translateX(-50%); top:calc(50% - 42px); color:var(--cy2); font-size:11px; letter-spacing:.16em;}
+
+  .callout{
+    margin-top:38px; padding:22px 26px; border:1px solid var(--hairm); border-radius:8px;
+    background:rgba(255,63,180,.045);
+    font-family:var(--sans); font-size:13.5px; line-height:1.7; color:var(--t2); max-width:660px;
+  }
+  .callout .tag{font-family:var(--mono); font-size:9px; letter-spacing:.2em; color:var(--mg2); display:block; margin-bottom:8px;}
+
+  /* ══════════════════════ PAGE 3 — INTELLIGENCE LAYER ══════════════════════ */
+  #p3{display:flex; flex-direction:column; justify-content:center;}
+  .tiers{display:flex; gap:14px; margin:34px 0 30px 0;}
+  .tier{
+    flex:1; border:1px solid var(--hair); border-radius:8px; padding:18px 14px;
+    background:rgba(139,92,255,.04);
+  }
+  .tier .bar{height:3px; border-radius:2px; margin-bottom:14px;}
+  .tier.n .bar{background:var(--t4);}
+  .tier.e .bar{background:var(--vi); box-shadow:0 0 10px rgba(139,92,255,.6);}
+  .tier.d .bar{background:var(--mg); box-shadow:0 0 10px rgba(255,63,180,.6);}
+  .tier.s .bar{background:var(--mg2); box-shadow:0 0 14px rgba(255,138,212,.75);}
+  .tier .name{font-family:var(--mono); font-size:12px; font-weight:700; letter-spacing:.12em; color:#fff; margin-bottom:8px;}
+  .tier .desc{font-family:var(--sans); font-size:10.5px; line-height:1.5; color:var(--t3);}
+
+  .concept-row{display:flex; gap:26px; margin-top:8px;}
+  .concept{flex:1;}
+  .concept .k{font-family:var(--mono); font-size:10px; letter-spacing:.16em; color:var(--cy); margin-bottom:6px;}
+  .concept .v{font-family:var(--sans); font-size:12.5px; line-height:1.6; color:var(--t2);}
+
+  /* ══════════════════════ PAGE 4 — PRINCIPLES ══════════════════════ */
+  #p4{display:flex; flex-direction:column; justify-content:center;}
+  .principle{display:flex; gap:20px; margin-bottom:26px; max-width:660px;}
+  .principle .num{font-family:var(--mono); font-size:12px; color:var(--vi); padding-top:2px; width:20px; flex-shrink:0;}
+  .principle .body b{font-family:var(--sans); font-size:14.5px; font-weight:700; color:#fff; display:block; margin-bottom:4px;}
+  .principle .body p{font-family:var(--sans); font-size:13px; line-height:1.65; color:var(--t2);}
+
+  .vision{
+    margin-top:14px; padding:26px 30px; border-radius:8px;
+    border:1px solid var(--hairc); background:rgba(34,224,255,.04);
+    font-family:var(--sans); font-size:13.5px; line-height:1.75; color:var(--t2); max-width:660px;
+  }
+  .vision .tag{font-family:var(--mono); font-size:9px; letter-spacing:.22em; color:var(--cy); display:block; margin-bottom:10px;}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════ PAGE 1 ═══════════════════════════ -->
+<section class="page" id="p1">
+  <div class="brandrow">
+    <div class="mark"></div>
+    <div class="wordmark">PARITY</div>
+  </div>
+  <div class="kicker">Risk Intelligence for Robinhood Chain Stock Tokens</div>
+
+  <div class="thesis">
+    Robinhood Chain Stock Tokens trade on-chain. What they are meant to represent
+    does not. <b>Parity exists to watch the distance between the two.</b>
+  </div>
+
+  <div class="question">
+    &ldquo;Is this Stock Token still trading at parity with what it is
+    supposed to represent?&rdquo;
+  </div>
+
+  <div class="subline">MINI-MANIFESTO &middot; V1</div>
+
+  <div class="pagefoot">
+    <span class="micro">PARITY</span>
+    <span class="micro">01 / 04</span>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ PAGE 2 ═══════════════════════════ -->
+<section class="page" id="p2">
+  <div class="h1"><span class="idx">01</span>THE PROBLEM</div>
+  <div class="h1rule"></div>
+
+  <div class="prose">
+    Robinhood Chain Stock Tokens create an on-chain market for assets whose
+    value is meant to track something else &mdash; a <span class="term">reference
+    price</span>, observed elsewhere, updated on its own schedule. The two do
+    not have to move in lockstep. An on-chain price can drift above its
+    reference (a <b>premium</b>) or below it (a <b>discount</b>), and the
+    distance between them is a Stock Token&rsquo;s <b>deviation from
+    parity</b>.
+  </div>
+  <div class="prose">
+    Seeing that a deviation exists is easy &mdash; read two numbers, subtract.
+    Understanding what the deviation <i>means</i> is harder. A small premium
+    that appears and disappears within an hour is not the same condition as a
+    discount that persists for a day. A deviation that is unremarkable for one
+    Stock Token may be extreme for another. A single percentage, on its own,
+    carries no history and no context.
+  </div>
+
+  <div class="rail">
+    <div class="track"></div>
+    <div class="beam-d"></div>
+    <div class="beam-p"></div>
+    <div class="origin"></div>
+    <div class="lbl o">0.00% PARITY</div>
+    <div class="lbl d">&#9668; DISCOUNT</div>
+    <div class="lbl p">PREMIUM &#9658;</div>
+  </div>
+
+  <div class="callout">
+    <span class="tag">WHAT PARITY WATCHES</span>
+    This is the line Parity watches: the point of exact correspondence between
+    what a Stock Token is trading for on-chain and what it is meant to
+    represent. Everything Parity reports is a statement about distance from
+    that line &mdash; and about what that distance has looked like over time.
+  </div>
+
+  <div class="pagefoot">
+    <span class="micro">PARITY</span>
+    <span class="micro">02 / 04</span>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ PAGE 3 ═══════════════════════════ -->
+<section class="page" id="p3">
+  <div class="h1"><span class="idx">02</span>THE INTELLIGENCE LAYER</div>
+  <div class="h1rule"></div>
+
+  <div class="prose">
+    Parity continuously observes verified on-chain and reference data for each
+    supported Stock Token and accumulates a historical record. From that
+    record it builds a <b>baseline</b>: a historical median for the
+    token&rsquo;s own deviation, and a baseline dispersion &mdash; measured
+    as a <b>MAD (median absolute deviation)</b> &mdash; describing how much
+    that deviation has varied around its median. Today&rsquo;s reading is
+    then measured against that baseline as a <b>MAD multiple</b>: how far
+    the current deviation sits from the historical median, relative to the
+    baseline dispersion.
+  </div>
+
+  <div class="tiers">
+    <div class="tier n"><div class="bar"></div><div class="name">NORMAL</div>
+      <div class="desc">Consistent with this token&rsquo;s own recent baseline.</div></div>
+    <div class="tier e"><div class="bar"></div><div class="name">ELEVATED</div>
+      <div class="desc">Meaningfully outside typical range for this token.</div></div>
+    <div class="tier d"><div class="bar"></div><div class="name">DISLOCATED</div>
+      <div class="desc">Substantially outside typical range.</div></div>
+    <div class="tier s"><div class="bar"></div><div class="name">SEVERE</div>
+      <div class="desc">Far outside typical range for this token.</div></div>
+  </div>
+
+  <div class="prose">
+    Read that scale for what it says and no more: a statement about how far
+    today&rsquo;s reading sits from this Stock Token&rsquo;s own recent
+    history &mdash; not a verdict, not a prediction, and not an instruction.
+  </div>
+
+  <div class="concept-row">
+    <div class="concept">
+      <div class="k">MATURITY</div>
+      <div class="v">A baseline needs enough observations and enough elapsed
+        time before it is trusted to mean anything. A young Stock Token is
+        honestly reported as still developing, never forced into a premature
+        verdict.</div>
+    </div>
+    <div class="concept">
+      <div class="k">PERSISTENCE</div>
+      <div class="v">A momentary blip and a sustained <b style="color:#fff">episode</b>
+        are genuinely different conditions. Parity tracks how long an
+        abnormal reading has held, not just that it occurred once.</div>
+    </div>
+  </div>
+
+  <div class="pagefoot">
+    <span class="micro">PARITY</span>
+    <span class="micro">03 / 04</span>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ PAGE 4 ═══════════════════════════ -->
+<section class="page" id="p4">
+  <div class="h1"><span class="idx">03</span>PRINCIPLES</div>
+  <div class="h1rule"></div>
+
+  <div class="principle">
+    <div class="num">01</div>
+    <div class="body"><b>Independent</b><p>Parity is not affiliated with Robinhood. It observes public, verifiable data and reports what it finds.</p></div>
+  </div>
+  <div class="principle">
+    <div class="num">02</div>
+    <div class="body"><b>Read-only</b><p>Parity does not execute trades, custody assets, or take any action on a user&rsquo;s behalf. It is an instrument, not an intermediary.</p></div>
+  </div>
+  <div class="principle">
+    <div class="num">03</div>
+    <div class="body"><b>Data-honest</b><p>When a reading is unavailable &mdash; a stale reference, a paused oracle, an upstream source that failed to respond &mdash; Parity reports it as unavailable. Never silently zero. Never quietly guessed.</p></div>
+  </div>
+  <div class="principle">
+    <div class="num">04</div>
+    <div class="body"><b>Not advice</b><p>A classification of SEVERE is not a sell signal. A classification of NORMAL is not a buy signal. Parity&rsquo;s thresholds are current operating hypotheses about relative abnormality, not validated boundaries of risk.</p></div>
+  </div>
+
+  <div class="vision">
+    <span class="tag">WHAT COMES NEXT</span>
+    Robinhood Chain Stock Token markets are early. As they grow, the questions
+    worth asking about them will grow too &mdash; not only <i>is this trading
+    at parity</i>, but <i>how deep is this market, and under what conditions
+    can it actually be traded</i>. Parity has already begun preserving the raw
+    on-chain observations &mdash; pool liquidity, reserve balances, tick and
+    price state &mdash; that this next layer of questions will eventually
+    depend on. That work today is deliberately limited to honest collection,
+    not interpretation: no execution score exists yet, and no claim is made
+    that a raw balance is the same thing as tradeable depth.
+  </div>
+
+  <div class="pagefoot">
+    <span class="micro">PARITY &middot; READ-ONLY INTELLIGENCE OVER VERIFIED ON-CHAIN DATA</span>
+    <span class="micro">04 / 04</span>
+  </div>
+</section>
+
+</body>
+</html>

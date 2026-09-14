@@ -1,0 +1,111 @@
+/*
+ * PARITY DOCUMENTATION DESIGN SYSTEM — extracted reference tokens
+ *
+ * Source of truth for these values remains design/approved/final-neon-
+ * refined.html and public/styles.css — that file is never modified, and
+ * this file is a DOCUMENTATION-ONLY derivative, not a live import of it.
+ * Every color/typography token below is copied verbatim from the approved
+ * spec's own CSS custom properties.
+ *
+ * This is a REFERENCE EXTRACT for future documents in the suite (FAQ,
+ * Community Guide, Moderator Handbook, Manifesto/Technical Primer), not a
+ * live stylesheet import of the mini-manifesto itself — the mini-manifesto
+ * PDF (docs/manifesto/parity-mini-manifesto.html) keeps its own inline,
+ * independently-verified copy of these rules so its already-QA'd render
+ * can never be silently broken by a future edit here. If this file and
+ * that one drift, this file is the one to update to match the manifesto,
+ * not the other way around, unless a new document deliberately introduces
+ * a new component worth folding back in.
+ *
+ * Render engine note: built and print-verified against wkhtmltopdf (WebKit,
+ * already installed in this environment, zero network dependency). It does
+ * not resolve Apple system-font keywords (ui-monospace, -apple-system) or
+ * always render CSS radial-gradient backgrounds reliably as soft fades —
+ * both were hit and fixed during the mini-manifesto build. Prefer the
+ * explicit font stacks below, and avoid radial-gradient decorative
+ * background layers on `.page` unless re-verified visually first.
+ */
+
+:root{
+  --void:#03030a; --glass:rgba(22,16,48,.55);
+  --cy:#22e0ff; --cy2:#7ff0ff; --vi:#8b5cff; --mg:#ff3fb4; --mg2:#ff8ad4;
+  --tx:#f2eeff; --t2:#a99bd0; --t3:#756796; --t4:#4e4470; --t5:#372f52;
+  --hair:rgba(139,92,255,.28); --hairc:rgba(34,224,255,.30); --hairm:rgba(255,63,180,.30);
+  /* Print-safe substitutes for the dashboard's ui-monospace/-apple-system stacks. */
+  --mono:"Liberation Mono","DejaVu Sans Mono",monospace;
+  --sans:"Liberation Sans","DejaVu Sans",sans-serif;
+}
+
+/* No green anywhere in this system. Direction colors (cy=premium,
+   mg=discount) describe direction only, never risk/success/failure. */
+
+/* ── page shell (US Letter @ 96dpi = 816x1056px) ── */
+.page{
+  width:816px; height:1056px;
+  background:var(--void); color:var(--tx);
+  position:relative; overflow:hidden;
+  page-break-after:always;
+  padding:64px 72px 56px 72px;
+}
+.page:last-child{page-break-after:avoid;}
+
+/* ── brand mark: the SAME motif as public/styles.css's .mk (a vertical
+   magenta -> cyan -> violet glowing bar), scaled for print. Do not invent
+   a different logo mark. ── */
+.mark{
+  width:8px; height:56px; border-radius:4px;
+  background:linear-gradient(180deg, transparent, var(--mg) 14%, var(--cy) 50%, var(--vi) 86%, transparent);
+  box-shadow:0 0 24px rgba(34,224,255,.55), 0 0 46px rgba(139,92,255,.35);
+}
+.wordmark{font-family:var(--sans); font-weight:700; font-size:30px; letter-spacing:.34em; color:#fff;}
+
+/* ── micro/caption voice, footers ── */
+.micro{font-family:var(--mono); font-size:9px; font-weight:700; letter-spacing:.24em; text-transform:uppercase; color:var(--t4);}
+.pagefoot{
+  position:absolute; left:72px; right:72px; bottom:32px;
+  display:flex; justify-content:space-between; align-items:baseline;
+  border-top:1px solid var(--hair); padding-top:14px;
+}
+.pagefoot .micro{color:var(--t5);}
+
+/* ── section headings ── */
+.h1{font-family:var(--sans); font-weight:700; font-size:13px; letter-spacing:.28em; text-transform:uppercase; color:var(--t2); margin-bottom:6px;}
+.h1 .idx{color:var(--vi); margin-right:10px;}
+.h1rule{width:42px; height:1px; background:var(--cy); opacity:.7; margin-bottom:30px;}
+
+/* ── prose ── */
+.prose{font-family:var(--sans); font-size:15.5px; line-height:1.75; color:var(--t2); max-width:660px;}
+.prose + .prose{margin-top:18px;}
+.prose b{color:var(--tx); font-weight:700;}
+.prose .term{font-family:var(--mono); color:var(--tx); font-size:14px;}
+
+/* ── callouts: violet = structural note, cyan = factual/positive framing,
+   magenta = caution/limitation. Never green for "success." ── */
+.callout{margin-top:38px; padding:22px 26px; border:1px solid var(--hairm); border-radius:8px; background:rgba(255,63,180,.045); font-family:var(--sans); font-size:13.5px; line-height:1.7; color:var(--t2); max-width:660px;}
+.callout .tag{font-family:var(--mono); font-size:9px; letter-spacing:.2em; color:var(--mg2); display:block; margin-bottom:8px;}
+.vision{margin-top:14px; padding:26px 30px; border-radius:8px; border:1px solid var(--hairc); background:rgba(34,224,255,.04); font-family:var(--sans); font-size:13.5px; line-height:1.75; color:var(--t2); max-width:660px;}
+.vision .tag{font-family:var(--mono); font-size:9px; letter-spacing:.22em; color:var(--cy); display:block; margin-bottom:10px;}
+
+/* ── Parity Line rail motif — reuse for any deviation/parity illustration ── */
+.rail{position:relative; height:110px; display:flex; align-items:center;}
+.rail .track{position:absolute; left:0; right:0; top:50%; height:1px; background:rgba(255,255,255,.14);}
+.rail .origin{position:absolute; left:50%; top:50%; width:2px; height:46px; margin:-23px 0 0 -1px; background:var(--cy); box-shadow:0 0 16px var(--cy);}
+.rail .beam-d{position:absolute; right:50%; top:50%; height:3px; width:38%; margin-top:-1.5px; background:linear-gradient(270deg, rgba(255,63,180,.15), var(--mg)); border-radius:2px;}
+.rail .beam-p{position:absolute; left:50%; top:50%; height:3px; width:38%; margin-top:-1.5px; background:linear-gradient(90deg, rgba(34,224,255,.15), var(--cy)); border-radius:2px;}
+.rail .lbl{position:absolute; top:calc(50% + 20px); font-family:var(--mono); font-size:10px; letter-spacing:.2em;}
+.rail .lbl.d{left:12%; color:var(--mg);} .rail .lbl.p{right:12%; color:var(--cy);}
+.rail .lbl.o{left:50%; transform:translateX(-50%); top:calc(50% - 42px); color:var(--cy2); font-size:11px; letter-spacing:.16em;}
+
+/* ── classification tier cards: NORMAL=neutral, ELEVATED=violet,
+   DISLOCATED=magenta, SEVERE=brighter magenta (mg2) — an intensity
+   progression using tokens already in the approved palette, not new
+   colors invented for documentation. ── */
+.tiers{display:flex; gap:14px;}
+.tier{flex:1; border:1px solid var(--hair); border-radius:8px; padding:18px 14px; background:rgba(139,92,255,.04);}
+.tier .bar{height:3px; border-radius:2px; margin-bottom:14px;}
+.tier.n .bar{background:var(--t4);}
+.tier.e .bar{background:var(--vi); box-shadow:0 0 10px rgba(139,92,255,.6);}
+.tier.d .bar{background:var(--mg); box-shadow:0 0 10px rgba(255,63,180,.6);}
+.tier.s .bar{background:var(--mg2); box-shadow:0 0 14px rgba(255,138,212,.75);}
+.tier .name{font-family:var(--mono); font-size:12px; font-weight:700; letter-spacing:.12em; color:#fff; margin-bottom:8px;}
+.tier .desc{font-family:var(--sans); font-size:10.5px; line-height:1.5; color:var(--t3);}
