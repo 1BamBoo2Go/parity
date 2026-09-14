@@ -44,6 +44,7 @@ function fullyWorkingDeps(): CaptureDeps {
     readSpotPrice: async () => ({
       poolAddress: "0xf4ACdAEEB7022862A763C9B1B885e11191c889E3" as `0x${string}`,
       sqrtPriceX96: 1n,
+      tick: -12345,
       token0: aapl.tokenAddressMainnet as `0x${string}`,
       token1: "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168" as `0x${string}`,
       rawPriceToken1PerToken0: 0, // unused by the orchestration directly; computeStockTokenPriceInQuoteAsset recomputes from sqrtPriceX96
@@ -55,6 +56,8 @@ function fullyWorkingDeps(): CaptureDeps {
       { address: "0x2", value: "500" },
     ],
     readSupply: async () => 1000n,
+    readLiquidity: async () => 123456789n,
+    readBalanceOf: async () => 987654321n,
   };
 }
 
@@ -74,6 +77,7 @@ describe("captureTickerSnapshot — happy path", () => {
     deps.readSpotPrice = async () => ({
       poolAddress: "0xf4ACdAEEB7022862A763C9B1B885e11191c889E3" as `0x${string}`,
       sqrtPriceX96: realisticSqrtPriceX96(),
+      tick: -12345,
       token0: aapl.tokenAddressMainnet as `0x${string}`,
       token1: "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168" as `0x${string}`,
       rawPriceToken1PerToken0: 0,
@@ -158,6 +162,7 @@ describe("captureTickerSnapshot — partial upstream failure must not invalidate
     deps.readSpotPrice = async () => ({
       poolAddress: "0xf4ACdAEEB7022862A763C9B1B885e11191c889E3" as `0x${string}`,
       sqrtPriceX96: realisticSqrtPriceX96(),
+      tick: -12345,
       token0: aapl.tokenAddressMainnet as `0x${string}`,
       token1: "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168" as `0x${string}`,
       rawPriceToken1PerToken0: 0,
@@ -202,5 +207,221 @@ describe("captureTickerSnapshot — partial upstream failure must not invalidate
     const record = await captureTickerSnapshot(aapl, null, fakeClient, "test-run-null-registry", fullyWorkingDeps());
     expect(record.robinhoodAssetStatus.status).toBe("unavailable");
     expect(record.robinhoodPrice.status).toBe("ok");
+  });
+});
+
+describe("captureTickerSnapshot — P5-C0 execution/liquidity telemetry", () => {
+  it("preserves sqrtPriceX96 and tick from the same slot0() read secondaryPrice already used — zero additional reads for these two fields", async () => {
+    const deps = fullyWorkingDeps();
+    let readSpotPriceCallCount = 0;
+    const realSqrt = realisticSqrtPriceX96();
+    deps.readSpotPrice = async () => {
+      readSpotPriceCallCount++;
+      return {
+        poolAddress: "0xf4ACdAEEB7022862A763C9B1B885e11191c889E3" as `0x${string}`,
+        sqrtPriceX96: realSqrt,
+        tick: -74959,
+        token0: aapl.tokenAddressMainnet as `0x${string}`,
+        token1: "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168" as `0x${string}`,
+        rawPriceToken1PerToken0: 0,
+      };
+    };
+    const record = await captureTickerSnapshot(aapl, registry, fakeClient, "test-run", deps);
+
+    expect(readSpotPriceCallCount).toBe(1); // exactly the one call secondaryPrice already required — no second call for telemetry
+    expect(record.poolSqrtPriceX96?.status).toBe("ok");
+    expect(record.poolSqrtPriceX96?.status === "ok" && record.poolSqrtPriceX96.value).toBe(realSqrt.toString());
+    expect(record.poolTick?.status).toBe("ok");
+    expect(record.poolTick?.status === "ok" && record.poolTick.value).toBe(-74959);
+  });
+
+  it("persists the configured pool fee tier with zero RPC calls (a known config constant, not a DataPoint)", async () => {
+    const deps = fullyWorkingDeps();
+    deps.readSpotPrice = async () => ({
+      poolAddress: "0xf4ACdAEEB7022862A763C9B1B885e11191c889E3" as `0x${string}`,
+      sqrtPriceX96: realisticSqrtPriceX96(),
+      tick: -74959,
+      token0: aapl.tokenAddressMainnet as `0x${string}`,
+      token1: "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168" as `0x${string}`,
+      rawPriceToken1PerToken0: 0,
+    });
+    const record = await captureTickerSnapshot(aapl, registry, fakeClient, "test-run", deps);
+    expect(record.poolFeeTierBps).toBe(aapl.poolFeeTier);
+    expect(typeof record.poolFeeTierBps).toBe("number");
+  });
+
+  it("captures pool liquidity via one additional RPC call, correctly serialized as a string", async () => {
+    const deps = fullyWorkingDeps();
+    deps.readSpotPrice = async () => ({
+      poolAddress: "0xf4ACdAEEB7022862A763C9B1B885e11191c889E3" as `0x${string}`,
+      sqrtPriceX96: realisticSqrtPriceX96(),
+      tick: -74959,
+      token0: aapl.tokenAddressMainnet as `0x${string}`,
+      token1: "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168" as `0x${string}`,
+      rawPriceToken1PerToken0: 0,
+    });
+    let liquidityCallCount = 0;
+    deps.readLiquidity = async (_client, poolAddress) => {
+      liquidityCallCount++;
+      expect(poolAddress).toBe("0xf4ACdAEEB7022862A763C9B1B885e11191c889E3");
+      return 123456789012345678901234n; // deliberately larger than Number.MAX_SAFE_INTEGER
+    };
+    const record = await captureTickerSnapshot(aapl, registry, fakeClient, "test-run", deps);
+
+    expect(liquidityCallCount).toBe(1);
+    expect(record.poolLiquidity?.status).toBe("ok");
+    expect(record.poolLiquidity?.status === "ok" && record.poolLiquidity.value).toBe("123456789012345678901234");
+    // Round-trips exactly through JSON without precision loss — the whole point of serializing as a string.
+    expect(record.poolLiquidity?.status === "ok" && BigInt(record.poolLiquidity.value)).toBe(123456789012345678901234n);
+  });
+
+  it("captures both token balances via two additional RPC calls against the correct token/owner pairs", async () => {
+    const deps = fullyWorkingDeps();
+    const token0 = aapl.tokenAddressMainnet as `0x${string}`;
+    const token1 = "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168" as `0x${string}`;
+    const poolAddress = "0xf4ACdAEEB7022862A763C9B1B885e11191c889E3" as `0x${string}`;
+    deps.readSpotPrice = async () => ({
+      poolAddress,
+      sqrtPriceX96: realisticSqrtPriceX96(),
+      tick: -74959,
+      token0,
+      token1,
+      rawPriceToken1PerToken0: 0,
+    });
+    const calls: Array<{ token: string; owner: string }> = [];
+    deps.readBalanceOf = async (_client, tokenAddress, owner) => {
+      calls.push({ token: tokenAddress, owner });
+      return tokenAddress === token0 ? 1000000000000000000000n : 500000000n;
+    };
+    const record = await captureTickerSnapshot(aapl, registry, fakeClient, "test-run", deps);
+
+    expect(calls).toHaveLength(2);
+    expect(calls.every((c) => c.owner === poolAddress)).toBe(true);
+    expect(calls.map((c) => c.token).sort()).toEqual([token0, token1].sort());
+    expect(record.poolToken0Balance?.status).toBe("ok");
+    expect(record.poolToken0Balance?.status === "ok" && record.poolToken0Balance.value).toBe("1000000000000000000000");
+    expect(record.poolToken1Balance?.status).toBe("ok");
+    expect(record.poolToken1Balance?.status === "ok" && record.poolToken1Balance.value).toBe("500000000");
+  });
+
+  it("liquidity failure is independent — does not affect balances, canonical price, or anything else", async () => {
+    const deps = fullyWorkingDeps();
+    deps.readSpotPrice = async () => ({
+      poolAddress: "0xf4ACdAEEB7022862A763C9B1B885e11191c889E3" as `0x${string}`,
+      sqrtPriceX96: realisticSqrtPriceX96(),
+      tick: -74959,
+      token0: aapl.tokenAddressMainnet as `0x${string}`,
+      token1: "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168" as `0x${string}`,
+      rawPriceToken1PerToken0: 0,
+    });
+    deps.readLiquidity = async () => {
+      throw new Error("simulated liquidity() revert");
+    };
+    const record = await captureTickerSnapshot(aapl, registry, fakeClient, "test-run", deps);
+
+    expect(record.poolLiquidity?.status).toBe("unavailable");
+    expect(record.poolLiquidity?.status === "unavailable" && record.poolLiquidity.detail).toContain("simulated liquidity() revert");
+    // Canonical price path and every other field are completely unaffected.
+    expect(record.secondaryPrice.status).toBe("ok");
+    expect(record.premiumDiscountPct.status).toBe("ok");
+    expect(record.poolToken0Balance?.status).toBe("ok");
+    expect(record.poolToken1Balance?.status).toBe("ok");
+    expect(record.poolSqrtPriceX96?.status).toBe("ok");
+  });
+
+  it("a single token-balance failure is independent — the other balance, liquidity, and canonical price all remain unaffected", async () => {
+    const deps = fullyWorkingDeps();
+    const token0 = aapl.tokenAddressMainnet as `0x${string}`;
+    deps.readSpotPrice = async () => ({
+      poolAddress: "0xf4ACdAEEB7022862A763C9B1B885e11191c889E3" as `0x${string}`,
+      sqrtPriceX96: realisticSqrtPriceX96(),
+      tick: -74959,
+      token0,
+      token1: "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168" as `0x${string}`,
+      rawPriceToken1PerToken0: 0,
+    });
+    deps.readBalanceOf = async (_client, tokenAddress) => {
+      if (tokenAddress === token0) throw new Error("simulated balanceOf revert for token0");
+      return 500000000n;
+    };
+    const record = await captureTickerSnapshot(aapl, registry, fakeClient, "test-run", deps);
+
+    expect(record.poolToken0Balance?.status).toBe("unavailable");
+    expect(record.poolToken1Balance?.status).toBe("ok");
+    expect(record.poolLiquidity?.status).toBe("ok");
+    expect(record.secondaryPrice.status).toBe("ok");
+    expect(record.premiumDiscountPct.status).toBe("ok");
+  });
+
+  it("when no pool resolves this run, all five telemetry DataPoints are honestly unavailable — never zero, never fabricated", async () => {
+    const deps = fullyWorkingDeps();
+    deps.resolvePool = async () => null; // factory.getPool found no pool this run
+    const record = await captureTickerSnapshot(aapl, registry, fakeClient, "test-run", deps);
+
+    expect(record.poolSqrtPriceX96?.status).toBe("unavailable");
+    expect(record.poolTick?.status).toBe("unavailable");
+    expect(record.poolLiquidity?.status).toBe("unavailable");
+    expect(record.poolToken0Balance?.status).toBe("unavailable");
+    expect(record.poolToken1Balance?.status).toBe("unavailable");
+    // Fee tier is a config constant with no failure mode — still present.
+    expect(record.poolFeeTierBps).toBe(aapl.poolFeeTier);
+    // None of these ever silently becomes a fabricated zero/empty string.
+    expect(record.poolLiquidity?.status === "unavailable").toBe(true);
+  });
+
+  it("a total telemetry-section failure cannot prevent the ticker snapshot from being written, and canonical fields remain fully intact", async () => {
+    const deps = fullyWorkingDeps();
+    deps.readSpotPrice = async () => ({
+      poolAddress: "0xf4ACdAEEB7022862A763C9B1B885e11191c889E3" as `0x${string}`,
+      sqrtPriceX96: realisticSqrtPriceX96(),
+      tick: -74959,
+      token0: aapl.tokenAddressMainnet as `0x${string}`,
+      token1: "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168" as `0x${string}`,
+      rawPriceToken1PerToken0: 0,
+    });
+    // Every telemetry-dependent dep throws — simulating a maximally hostile run.
+    deps.readLiquidity = async () => {
+      throw new Error("total telemetry outage");
+    };
+    deps.readBalanceOf = async () => {
+      throw new Error("total telemetry outage");
+    };
+    const record = await captureTickerSnapshot(aapl, registry, fakeClient, "test-run", deps);
+
+    // The function returned a real record at all — did not throw.
+    expect(record.recordType).toBe("ticker_snapshot");
+    expect(record.secondaryPrice.status).toBe("ok");
+    expect(record.premiumDiscountPct.status).toBe("ok");
+    expect(record.robinhoodAssetStatus.status).toBe("ok");
+    expect(record.holderConcentration.status).toBe("ok");
+    expect(record.poolLiquidity?.status).toBe("unavailable");
+    expect(record.poolToken0Balance?.status).toBe("unavailable");
+    expect(record.poolToken1Balance?.status).toBe("unavailable");
+  });
+
+  it("historical/additive compatibility: an old record shape (no telemetry fields at all) is still a structurally valid TickerSnapshotRecord", async () => {
+    // Simulates reading a pre-P5-C0 historical record back from disk —
+    // exactly what readJsonLines would hand back for an old line.
+    const oldRecord: Omit<Awaited<ReturnType<typeof captureTickerSnapshot>>, "poolSqrtPriceX96" | "poolTick" | "poolFeeTierBps" | "poolLiquidity" | "poolToken0Balance" | "poolToken1Balance"> = {
+      recordType: "ticker_snapshot",
+      runId: "old-run",
+      capturedAt: "2026-08-01T00:00:00.000Z",
+      ticker: "AAPL",
+      canonicalTokenAddress: aapl.tokenAddressMainnet,
+      configuredPoolAddress: aapl.poolAddressMainnet,
+      robinhoodAssetStatus: { status: "ok", value: "ACTIVE", asOf: "x", source: "s" },
+      robinhoodPrice: { status: "ok", value: { bid: "1", ask: "1", mid: 1, isTradingHalt: false, generatedAt: "x" }, asOf: "x", source: "s" },
+      chainlinkReference: { status: "ok", value: { normalizedPrice: 1, decimals: 8, updatedAt: "x" }, asOf: "x", source: "s" },
+      oraclePaused: { status: "ok", value: false, asOf: "x", source: "s" },
+      secondaryPrice: { status: "ok", value: 1, asOf: "x", source: "s" },
+      premiumDiscountPct: { status: "ok", value: 0, asOf: "x", source: "s" },
+      holderConcentration: { status: "ok", value: { holderRows: 1, top1Pct: 1, top5Pct: 1, top10Pct: 1 }, asOf: "x", source: "s" },
+    };
+    // TypeScript accepts this object as a valid TickerSnapshotRecord
+    // (all six new fields are optional) — this assignment itself is the
+    // compile-time proof of backward compatibility.
+    const asFullRecord: Awaited<ReturnType<typeof captureTickerSnapshot>> = oldRecord;
+    expect(asFullRecord.poolLiquidity).toBeUndefined();
+    expect(asFullRecord.poolFeeTierBps).toBeUndefined();
   });
 });

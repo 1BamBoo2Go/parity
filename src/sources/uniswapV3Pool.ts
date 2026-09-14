@@ -58,6 +58,13 @@ const POOL_ABI = [
     inputs: [],
     outputs: [{ name: "", type: "address" }],
   },
+  {
+    type: "function",
+    name: "liquidity",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "uint128" }],
+  },
 ] as const;
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
@@ -95,6 +102,12 @@ export async function resolvePoolAddress(
 export interface PoolSpotPrice {
   poolAddress: `0x${string}`;
   sqrtPriceX96: bigint;
+  /**
+   * P5-C0: preserved from the SAME slot0() call above — zero additional
+   * RPC calls. Previously fetched and silently discarded (only
+   * sqrtPriceX96 was destructured out of the seven-element tuple).
+   */
+  tick: number;
   token0: `0x${string}`;
   token1: `0x${string}`;
   /**
@@ -132,7 +145,7 @@ export async function readPoolSpotPrice(
     client.readContract({ address: poolAddress, abi: POOL_ABI, functionName: "token1" }),
   ]);
 
-  const [sqrtPriceX96] = slot0 as readonly [bigint, number, number, number, number, number, boolean];
+  const [sqrtPriceX96, tick] = slot0 as readonly [bigint, number, number, number, number, number, boolean];
 
   // price = (sqrtPriceX96 / 2^96)^2, giving token1 per token0 in raw (un-decimals-adjusted) units.
   const Q96 = 2 ** 96;
@@ -142,8 +155,25 @@ export async function readPoolSpotPrice(
   return {
     poolAddress,
     sqrtPriceX96,
+    tick,
     token0: token0 as `0x${string}`,
     token1: token1 as `0x${string}`,
     rawPriceToken1PerToken0,
   };
+}
+
+/**
+ * P5-C0: read a V3 pool's current in-range active liquidity (the standard
+ * `liquidity()` view function on every V3 pool). This is NOT the same as
+ * total reserves — it is the liquidity currently active at the pool's
+ * current tick, per Uniswap V3's concentrated-liquidity design. One
+ * additional RPC call per resolved pool; no new external provider.
+ */
+export async function readPoolLiquidity(client: PublicClient, poolAddress: `0x${string}`): Promise<bigint> {
+  const liquidity = await client.readContract({
+    address: poolAddress,
+    abi: POOL_ABI,
+    functionName: "liquidity",
+  });
+  return liquidity as bigint;
 }

@@ -15,6 +15,13 @@ const ERC20_ABI = [
     inputs: [],
     outputs: [{ name: "", type: "uint8" }],
   },
+  {
+    type: "function",
+    name: "balanceOf",
+    stateMutability: "view",
+    inputs: [{ name: "account", type: "address" }],
+    outputs: [{ name: "", type: "uint256" }],
+  },
 ] as const;
 
 /** Read raw totalSupply() from any ERC-20 contract. Returns a BigInt — never coerced to a JS number. */
@@ -40,4 +47,22 @@ export async function readErc20Decimals(client: PublicClient, tokenAddress: `0x$
     functionName: "decimals",
   });
   return decimals as number;
+}
+
+/**
+ * P5-C0: read balanceOf(owner) on any ERC-20 contract. Used to observe a
+ * Uniswap V3 pool's raw token reserves (owner = the pool address). This is
+ * a RAW OBSERVATION ONLY — see src/snapshot/types.ts's poolToken0Balance/
+ * poolToken1Balance doc for why a raw balance must not be read as
+ * "executable liquidity" without understanding V3's concentrated-liquidity
+ * mechanics.
+ */
+export async function readErc20BalanceOf(client: PublicClient, tokenAddress: `0x${string}`, owner: `0x${string}`): Promise<bigint> {
+  const balance = await client.readContract({
+    address: tokenAddress,
+    abi: ERC20_ABI,
+    functionName: "balanceOf",
+    args: [owner],
+  });
+  return balance as bigint;
 }

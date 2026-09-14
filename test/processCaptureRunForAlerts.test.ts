@@ -49,6 +49,8 @@ function workingDeps(): CaptureDeps {
     readDecimals: async () => 18,
     fetchHolders: async () => [{ address: "0x1", value: "100" }],
     readSupply: async () => 1000n,
+    readLiquidity: async () => 123456789n,
+    readBalanceOf: async () => 987654321n,
   };
 }
 const workingRegistry = async () => ({

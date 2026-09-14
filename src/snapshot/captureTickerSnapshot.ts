@@ -4,8 +4,8 @@ import type { RobinhoodAssetsResponse } from "../sources/robinhoodRegistry.js";
 import { findDeploymentOnChain } from "../sources/robinhoodRegistry.js";
 import { fetchRobinhoodPrice, type RobinhoodPriceQuote } from "../sources/robinhoodPrices.js";
 import { readChainlinkFeed, readStockTokenMultiplierState, type ChainlinkReading, type StockTokenMultiplierState } from "../sources/chainlinkFeed.js";
-import { resolvePoolAddress, readPoolSpotPrice, UNISWAP_V3_FACTORY_MAINNET, type PoolSpotPrice } from "../sources/uniswapV3Pool.js";
-import { readErc20Decimals, readTotalSupply } from "../sources/erc20.js";
+import { resolvePoolAddress, readPoolSpotPrice, readPoolLiquidity, UNISWAP_V3_FACTORY_MAINNET, type PoolSpotPrice } from "../sources/uniswapV3Pool.js";
+import { readErc20Decimals, readTotalSupply, readErc20BalanceOf } from "../sources/erc20.js";
 import { fetchTopHolders, computeConcentrationBands, type TokenHolder } from "../sources/blockscoutHolders.js";
 import { computeStockTokenPriceInQuoteAsset } from "../domain/poolPrice.js";
 import { buildParitySnapshot } from "../parity/buildParitySnapshot.js";
@@ -35,6 +35,10 @@ export interface CaptureDeps {
   readDecimals: (client: PublicClient, tokenAddress: `0x${string}`) => Promise<number>;
   fetchHolders: (tokenAddress: string) => Promise<TokenHolder[]>;
   readSupply: (client: PublicClient, tokenAddress: `0x${string}`) => Promise<bigint>;
+  /** P5-C0: pool's active in-range liquidity. */
+  readLiquidity: (client: PublicClient, poolAddress: `0x${string}`) => Promise<bigint>;
+  /** P5-C0: ERC20 balanceOf(owner), used to observe a pool's raw token reserves. */
+  readBalanceOf: (client: PublicClient, tokenAddress: `0x${string}`, owner: `0x${string}`) => Promise<bigint>;
 }
 
 export const defaultCaptureDeps: CaptureDeps = {
@@ -46,6 +50,8 @@ export const defaultCaptureDeps: CaptureDeps = {
   readDecimals: readErc20Decimals,
   fetchHolders: fetchTopHolders,
   readSupply: readTotalSupply,
+  readLiquidity: readPoolLiquidity,
+  readBalanceOf: readErc20BalanceOf,
 };
 
 function unavailable<T>(reason: DataPoint<T> extends never ? never : string, detail: string, source: string): DataPoint<T> {
@@ -136,6 +142,12 @@ export async function captureTickerSnapshot(
 
   // 4. Secondary price (pool resolution + decimals/orientation normalization).
   let secondaryForCalc: DataPoint<number> = unavailable("no_verified_pool", "no pool candidate configured", "uniswap_v3");
+  // P5-C0: captured alongside secondaryForCalc purely so section 7 below can
+  // REUSE this run's already-resolved pool address and already-fetched
+  // slot0() data — zero additional RPC calls for reuse. Does not change
+  // secondaryForCalc's own computation/control-flow at all.
+  let resolvedPoolAddressForTelemetry: `0x${string}` | null = null;
+  let spotForTelemetry: PoolSpotPrice | null = null;
   if (ticker.tokenAddressMainnet && ticker.poolFeeTier && ticker.quoteAsset === "USDG") {
     try {
       const poolAddress = await deps.resolvePool(
@@ -148,7 +160,9 @@ export async function captureTickerSnapshot(
       if (!poolAddress) {
         secondaryForCalc = unavailable("no_verified_pool", `factory.getPool returned no pool for ${ticker.symbol}/USDG`, "uniswap_v3");
       } else {
+        resolvedPoolAddressForTelemetry = poolAddress;
         const spot = await deps.readSpotPrice(client, poolAddress);
+        spotForTelemetry = spot;
         const [decimals0, decimals1] = await Promise.all([
           deps.readDecimals(client, spot.token0),
           deps.readDecimals(client, spot.token1),
@@ -209,6 +223,68 @@ export async function captureTickerSnapshot(
     }
   }
 
+  // 7. P5-C0: raw execution/liquidity telemetry — ADDITIVE ONLY, and
+  // deliberately isolated from everything above. Nothing in this section
+  // can affect robinhoodAssetStatus, robinhoodPrice, chainlinkReference,
+  // oraclePaused, secondaryPrice, premiumDiscountPct, or holderConcentration
+  // — all of those are already fully computed by this point. The whole
+  // section is wrapped in its own outer try/catch as a final defensive
+  // layer, so even a genuinely unexpected error here cannot prevent this
+  // function from returning a valid TickerSnapshotRecord.
+  let poolSqrtPriceX96: DataPoint<string> = unavailable("no_verified_pool", "no pool resolved this run", "uniswap_v3");
+  let poolTick: DataPoint<number> = unavailable("no_verified_pool", "no pool resolved this run", "uniswap_v3");
+  let poolLiquidity: DataPoint<string> = unavailable("no_verified_pool", "no pool resolved this run", "uniswap_v3");
+  let poolToken0Balance: DataPoint<string> = unavailable("no_verified_pool", "no pool resolved this run", "uniswap_v3");
+  let poolToken1Balance: DataPoint<string> = unavailable("no_verified_pool", "no pool resolved this run", "uniswap_v3");
+  const poolFeeTierBps: number | null = ticker.poolFeeTier ?? null;
+
+  try {
+    if (spotForTelemetry) {
+      // Preserved from the slot0() read secondaryPrice already made above —
+      // zero additional RPC calls, purely reading already-fetched values.
+      poolSqrtPriceX96 = { status: "ok", value: spotForTelemetry.sqrtPriceX96.toString(), asOf: now, source: "uniswap_v3 slot0()" };
+      poolTick = { status: "ok", value: spotForTelemetry.tick, asOf: now, source: "uniswap_v3 slot0()" };
+    }
+
+    if (resolvedPoolAddressForTelemetry) {
+      const poolAddress = resolvedPoolAddressForTelemetry;
+
+      try {
+        const liquidity = await deps.readLiquidity(client, poolAddress);
+        poolLiquidity = { status: "ok", value: liquidity.toString(), asOf: now, source: `Uniswap V3 pool ${poolAddress} liquidity()` };
+      } catch (err) {
+        poolLiquidity = unavailable("upstream_error", err instanceof Error ? err.message : String(err), "uniswap_v3");
+      }
+
+      if (spotForTelemetry) {
+        try {
+          const balance0 = await deps.readBalanceOf(client, spotForTelemetry.token0, poolAddress);
+          poolToken0Balance = { status: "ok", value: balance0.toString(), asOf: now, source: `${spotForTelemetry.token0} balanceOf(${poolAddress})` };
+        } catch (err) {
+          poolToken0Balance = unavailable("upstream_error", err instanceof Error ? err.message : String(err), "uniswap_v3");
+        }
+
+        try {
+          const balance1 = await deps.readBalanceOf(client, spotForTelemetry.token1, poolAddress);
+          poolToken1Balance = { status: "ok", value: balance1.toString(), asOf: now, source: `${spotForTelemetry.token1} balanceOf(${poolAddress})` };
+        } catch (err) {
+          poolToken1Balance = unavailable("upstream_error", err instanceof Error ? err.message : String(err), "uniswap_v3");
+        }
+      } else {
+        poolToken0Balance = unavailable("upstream_error", "pool resolved but spot-price token0/token1 unavailable this run", "uniswap_v3");
+        poolToken1Balance = unavailable("upstream_error", "pool resolved but spot-price token0/token1 unavailable this run", "uniswap_v3");
+      }
+    }
+  } catch (err) {
+    // Genuinely unexpected failure inside the telemetry section itself —
+    // recorded honestly, never allowed to propagate. Canonical price
+    // fields above are entirely unaffected regardless.
+    const detail = err instanceof Error ? err.message : String(err);
+    poolLiquidity = unavailable("upstream_error", detail, "uniswap_v3");
+    poolToken0Balance = unavailable("upstream_error", detail, "uniswap_v3");
+    poolToken1Balance = unavailable("upstream_error", detail, "uniswap_v3");
+  }
+
   return {
     recordType: "ticker_snapshot",
     runId,
@@ -223,5 +299,11 @@ export async function captureTickerSnapshot(
     secondaryPrice: serializeDataPoint(composed.secondaryPrice),
     premiumDiscountPct: serializeDataPoint(composed.premiumDiscountPct),
     holderConcentration: serializeDataPoint(holderConcentration),
+    poolSqrtPriceX96: serializeDataPoint(poolSqrtPriceX96),
+    poolTick: serializeDataPoint(poolTick),
+    poolFeeTierBps,
+    poolLiquidity: serializeDataPoint(poolLiquidity),
+    poolToken0Balance: serializeDataPoint(poolToken0Balance),
+    poolToken1Balance: serializeDataPoint(poolToken1Balance),
   };
 }
