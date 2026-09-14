@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>PARITY — Manifesto / Technical Primer</title>
+<style>
+:root{
+  --void:#03030a; --glass:rgba(22,16,48,.55);
+  --cy:#22e0ff; --cy2:#7ff0ff; --vi:#8b5cff; --mg:#ff3fb4; --mg2:#ff8ad4;
+  --tx:#f2eeff; --t2:#a99bd0; --t3:#756796; --t4:#4e4470; --t5:#372f52;
+  --hair:rgba(139,92,255,.28); --hairc:rgba(34,224,255,.30); --hairm:rgba(255,63,180,.30);
+  --mono:"Liberation Mono","DejaVu Sans Mono",monospace;
+  --sans:"Liberation Sans","DejaVu Sans",sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{background:var(--void);color:var(--tx);font-family:var(--sans);}
+body{padding:0 72px;}
+
+.mark{width:8px;height:44px;border-radius:4px;display:inline-block;vertical-align:middle;
+  background:linear-gradient(180deg, transparent, var(--mg) 14%, var(--cy) 50%, var(--vi) 86%, transparent);
+  box-shadow:0 0 20px rgba(34,224,255,.5), 0 0 38px rgba(139,92,255,.32);}
+.wordmark{font-family:var(--sans); font-weight:700; font-size:26px; letter-spacing:.32em; color:#fff; display:inline-block; vertical-align:middle; margin-left:18px;}
+.micro{font-family:var(--mono); font-size:9px; font-weight:700; letter-spacing:.24em; text-transform:uppercase; color:var(--t4);}
+
+/* cover */
+.cover{padding-top:110px; padding-bottom:40px;}
+.cover .kicker{font-family:var(--mono); font-size:12px; letter-spacing:.28em; color:var(--t3); text-transform:uppercase; margin:28px 0 4px 0;}
+.cover .sub{font-family:var(--sans); font-weight:300; font-size:15px; font-style:italic; color:var(--t2); max-width:620px; margin-top:14px; line-height:1.7;}
+
+/* TOC */
+.toc{margin-top:44px;}
+.toc-h{font-family:var(--mono); font-size:10px; letter-spacing:.24em; color:var(--t3); text-transform:uppercase; margin-bottom:14px; border-bottom:1px solid var(--hair); padding-bottom:10px;}
+.toc-row{display:flex; align-items:baseline; padding:7px 0; border-bottom:1px solid rgba(139,92,255,.12);}
+.toc-idx{font-family:var(--mono); font-size:11px; color:var(--vi); width:32px; flex-shrink:0;}
+.toc-title{font-family:var(--sans); font-size:12.5px; color:var(--tx); flex:1;}
+
+/* section heading */
+.h1{font-family:var(--sans); font-weight:700; font-size:13px; letter-spacing:.26em; text-transform:uppercase; color:var(--t2); margin-bottom:6px; page-break-before:always; padding-top:52px;}
+.h1:first-of-type{page-break-before:avoid;}
+.h1 .idx{color:var(--vi); margin-right:10px;}
+.h1rule{width:42px; height:1px; background:var(--cy); opacity:.7; margin-bottom:26px;}
+
+/* prose */
+.sec p{font-family:var(--sans); font-size:12.5px; line-height:1.75; color:var(--t2); max-width:680px; margin-bottom:14px;}
+.sec p b{color:var(--tx); font-weight:700;}
+.sec p code{font-family:var(--mono); color:var(--cy2); font-size:11.5px; background:rgba(34,224,255,.06); padding:1px 4px; border-radius:3px;}
+.sec p i{color:var(--t2);}
+
+/* tables */
+.doc-table{border-collapse:collapse; margin:10px 0 20px 0; max-width:680px; width:100%;}
+.doc-table th{font-family:var(--mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--cy2); text-align:left; padding:8px 14px; border-bottom:1px solid var(--hairc);}
+.doc-table td{font-family:var(--sans); font-size:12px; color:var(--t2); padding:8px 14px; border-bottom:1px solid rgba(139,92,255,.14);}
+.doc-table tr:first-child td{color:var(--tx);}
+
+/* lists */
+.doc-list{margin:6px 0 18px 0; padding-left:20px; max-width:680px;}
+.doc-list li{font-family:var(--sans); font-size:12.5px; line-height:1.7; color:var(--t2); margin-bottom:6px;}
+.doc-list li b{color:var(--tx);}
+.doc-list li code{font-family:var(--mono); color:var(--cy2); font-size:11.5px;}
+
+/* callouts */
+.callout{margin:16px 0 22px 0; padding:16px 22px; border:1px solid var(--hairm); border-radius:8px; background:rgba(255,63,180,.05); max-width:680px;}
+.callout-label{font-family:var(--mono); font-size:11px; letter-spacing:.08em; color:var(--mg2); font-weight:700;}
+.callout-body{font-family:var(--sans); font-size:12px; line-height:1.65; color:var(--t2); margin-top:10px;}
+.callout-body code{font-family:var(--mono); color:var(--cy2); font-size:11px;}
+
+.diagram-wrap{margin:22px 0 26px 0;}
+
+/* Parity Line rail */
+.rail{position:relative; height:96px; display:flex; align-items:center; max-width:680px;}
+.rail .track{position:absolute; left:0; right:0; top:50%; height:1px; background:rgba(255,255,255,.14);}
+.rail .origin{position:absolute; left:50%; top:50%; width:2px; height:40px; margin:-20px 0 0 -1px; background:var(--cy); box-shadow:0 0 14px var(--cy);}
+.rail .beam-d{position:absolute; right:50%; top:50%; height:3px; width:38%; margin-top:-1.5px; background:linear-gradient(270deg, rgba(255,63,180,.15), var(--mg)); border-radius:2px;}
+.rail .beam-p{position:absolute; left:50%; top:50%; height:3px; width:38%; margin-top:-1.5px; background:linear-gradient(90deg, rgba(34,224,255,.15), var(--cy)); border-radius:2px;}
+.rail .lbl{position:absolute; top:calc(50% + 18px); font-family:var(--mono); font-size:9.5px; letter-spacing:.16em;}
+.rail .lbl.d{left:10%; color:var(--mg);} .rail .lbl.p{right:10%; color:var(--cy);}
+.rail .lbl.o{left:50%; transform:translateX(-50%); top:calc(50% - 36px); color:var(--cy2); font-size:10px; letter-spacing:.14em;}
+
+/* architecture pipeline */
+.pipeline{max-width:520px; display:flex; flex-direction:column; align-items:stretch;}
+.pnode{border:1px solid var(--hair); border-radius:8px; padding:12px 16px; background:rgba(139,92,255,.05); text-align:center;}
+.pnode-label{font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; color:var(--tx); font-weight:700;}
+.pnode-detail{font-family:var(--sans); font-size:10px; color:var(--t3); margin-top:5px;}
+.pnode.intelligence{border-color:var(--hairc); background:rgba(34,224,255,.05);}
+.parrow{text-align:center; color:var(--vi); font-size:14px; padding:4px 0;}
+.pfan{display:flex; gap:10px;}
+.pnode.small{flex:1; padding:10px 8px;}
+.pnode.small .pnode-label{font-size:9.5px;}
+
+/* classification ladder (tiers) */
+.tiers{display:flex; gap:12px; max-width:680px;}
+.tier{flex:1; border:1px solid var(--hair); border-radius:8px; padding:14px 10px; background:rgba(139,92,255,.04);}
+.tier .bar{height:3px; border-radius:2px; margin-bottom:10px;}
+.tier.n .bar{background:var(--t4);}
+.tier.e .bar{background:var(--vi); box-shadow:0 0 10px rgba(139,92,255,.6);}
+.tier.d .bar{background:var(--mg); box-shadow:0 0 10px rgba(255,63,180,.6);}
+.tier.s .bar{background:var(--mg2); box-shadow:0 0 14px rgba(255,138,212,.75);}
+.tier .name{font-family:var(--mono); font-size:10.5px; font-weight:700; letter-spacing:.08em; color:#fff; margin-bottom:6px;}
+.tier .desc{font-family:var(--sans); font-size:9.5px; color:var(--t3);}
+
+/* maturity progression */
+.maturity-flow{display:flex; align-items:center; max-width:680px; margin-top:8px;}
+.mstage{flex:1; border:1px solid var(--hair); border-radius:8px; padding:12px 10px; text-align:center; background:rgba(139,92,255,.04);}
+.mstage.m1{opacity:.55;} .mstage.m2{opacity:.8; border-color:var(--hairc);} .mstage.m3{border-color:var(--cy); background:rgba(34,224,255,.06);}
+.mname{font-family:var(--mono); font-size:10px; font-weight:700; color:var(--tx); letter-spacing:.04em;}
+.mcond{font-family:var(--sans); font-size:9px; color:var(--t3); margin-top:6px; line-height:1.4;}
+.marrow{color:var(--vi); font-size:14px; padding:0 8px;}
+.mature-note{font-family:var(--sans); font-size:11px; font-style:italic; color:var(--t3); margin-top:10px;}
+
+/* alert transition flow */
+.alert-flow{max-width:680px; margin-top:8px;}
+.aflow-row{display:flex; align-items:center; gap:10px; padding:7px 0; border-bottom:1px solid rgba(139,92,255,.12);}
+.aflow-row.noalert{opacity:.6;}
+.achip{font-family:var(--mono); font-size:9.5px; letter-spacing:.05em; padding:3px 9px; border-radius:4px; border:1px solid var(--hair);}
+.achip.normal{color:var(--cy2); border-color:var(--hairc);}
+.achip.abn, .achip.abn-more, .achip.abn-less{color:var(--mg2); border-color:var(--hairm);}
+.achip.null, .achip.anything{color:var(--t4);}
+.aop{color:var(--t4); font-size:12px;}
+.aevent{margin-left:auto; font-family:var(--mono); font-size:9.5px; letter-spacing:.06em; padding:3px 9px; border-radius:4px;}
+.aevent.new{background:rgba(255,63,180,.12); color:var(--mg2);}
+.aevent.esc{background:rgba(255,63,180,.18); color:var(--mg2);}
+.aevent.rec{background:rgba(34,224,255,.12); color:var(--cy2);}
+.aevent.none{color:var(--t4);}
+
+.ascii-rail{display:none;} /* superseded by the real rail diagram; kept only in case a marker is ever missed */
+
+.docfoot{margin-top:50px; padding:20px 0 36px 0; border-top:1px solid var(--hair);}
+.docfoot .micro{color:var(--t5);}
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div><span class="mark"></span><span class="wordmark">PARITY</span></div>
+  <div class="kicker">Manifesto / Technical Primer</div>
+  <div class="sub">A complete technical and philosophical account of what Parity is, how it works, and what it deliberately does not claim.</div>
+
+  <div class="toc">
+    <div class="toc-h">Contents</div>
+    <div class="toc-row"><span class="toc-idx">01</span><span class="toc-title">Why Parity Exists</span></div><div class="toc-row"><span class="toc-idx">02</span><span class="toc-title">The Parity Model</span></div><div class="toc-row"><span class="toc-idx">03</span><span class="toc-title">Data Sources</span></div><div class="toc-row"><span class="toc-idx">04</span><span class="toc-title">Snapshot &amp; History Architecture</span></div><div class="toc-row"><span class="toc-idx">05</span><span class="toc-title">Data Health vs. Statistical Eligibility</span></div><div class="toc-row"><span class="toc-idx">06</span><span class="toc-title">Historical Baseline</span></div><div class="toc-row"><span class="toc-idx">07</span><span class="toc-title">Maturity</span></div><div class="toc-row"><span class="toc-idx">08</span><span class="toc-title">Classification</span></div><div class="toc-row"><span class="toc-idx">09</span><span class="toc-title">Persistence &amp; Episodes</span></div><div class="toc-row"><span class="toc-idx">10</span><span class="toc-title">Alert Engine</span></div><div class="toc-row"><span class="toc-idx">11</span><span class="toc-title">Risk API</span></div><div class="toc-row"><span class="toc-idx">12</span><span class="toc-title">Execution / Liquidity Telemetry</span></div><div class="toc-row"><span class="toc-idx">13</span><span class="toc-title">Gas Telemetry</span></div><div class="toc-row"><span class="toc-idx">14</span><span class="toc-title">Product Principles</span></div><div class="toc-row"><span class="toc-idx">15</span><span class="toc-title">Limitations</span></div><div class="toc-row"><span class="toc-idx">16</span><span class="toc-title">Future Direction</span></div>
+  </div>
+</div>
+
+<div class="h1"><span class="idx">01</span>WHY PARITY EXISTS</div>
+<div class="h1rule"></div>
+<div class="sec">
+<p>Robinhood Chain Stock Tokens create on-chain markets for assets whose value is meant to track something else entirely — a reference price, observed elsewhere, updated on its own schedule. The two prices are not required to move together at every moment. An on-chain price can drift above its reference (a premium) or below it (a discount), and nothing about the architecture guarantees the gap stays small.</p>
+<p>Seeing that a gap exists is trivial: read two numbers, subtract. Understanding what the gap <i>means</i> is the actual problem. A premium that appears and disappears within an hour is not the same condition as a discount that persists for a day. A deviation that is unremarkable for one Stock Token may be extreme for another, because different tokens have different baseline behavior. A single percentage, on its own, carries no history and no context — and history is exactly what turns "the price is different" into something useful.</p>
+<p>Parity exists to answer one question, continuously, for every Stock Token it supports:</p>
+<p><b>"Is this Stock Token still trading at parity with what it is supposed to represent?"</b></p>
+<p>Not "is the price different" — that's the easy half. The harder half is distinguishing ordinary basis (small, temporary, unremarkable divergence) from genuine dislocation (a reading that is statistically abnormal relative to that specific token's own recent behavior). Parity's entire design exists in service of that distinction, and every section below traces back to it.</p>
+</div>
+<div class="h1"><span class="idx">02</span>THE PARITY MODEL</div>
+<div class="h1rule"></div>
+<div class="sec">
+<p><b>Parity</b> is the point of exact correspondence between a Stock Token's on-chain price and its reference price — 0.00% deviation. <b>Premium</b> means the on-chain price sits above the reference; <b>discount</b> means it sits below. <b>Deviation</b> is the signed percentage distance between the two.</p>
+<p>Direction is descriptive, not evaluative. A premium is not "good" and a discount is not "bad" — they describe which side of the line a price currently sits on, nothing more. This distinction matters because it is easy, especially in a market context, to unconsciously read "premium" as bullish and "discount" as bearish. Parity does not support that reading, and nothing in its output should be interpreted that way.</p>
+<p>The <b>Parity Line</b> is the visual and conceptual anchor for this whole model — the 0.00% axis, with discount on one side and premium on the other:</p>
+<div class="diagram-wrap"><div class="rail">
+    <div class="track"></div>
+    <div class="beam-d"></div>
+    <div class="beam-p"></div>
+    <div class="origin"></div>
+    <div class="lbl o">0.00% PARITY</div>
+    <div class="lbl d">&#9668; DISCOUNT</div>
+    <div class="lbl p">PREMIUM &#9658;</div>
+</div></div>
+<p>Everything Parity reports is ultimately a statement about distance from that line, and — critically — about what that distance has looked like over time for this specific Stock Token. A raw deviation reading answers "how far from the line, right now." Everything from Section 06 onward exists to answer the much more useful question: "is that distance ordinary or abnormal, for this token, based on its own history?"</p>
+</div>
+<div class="h1"><span class="idx">03</span>DATA SOURCES</div>
+<div class="h1rule"></div>
+<div class="sec">
+<p>Parity's intelligence is built entirely from data that is independently observable and verifiable — no data source is invented, estimated, or purchased from a proprietary feed. Confirmed current sources:</p>
+<p><b>Robinhood registry and price data.</b> Robinhood's own published <code>/rhj/assets</code> (registry, asset status, multiplier state) and <code>/rhj/prices</code> (bid/ask quote, trading-halt flag) endpoints. This is the source for the Stock Token's own live quote and operational status.</p>
+<p><b>Chainlink reference feed.</b> An on-chain <code>AggregatorV3</code>-style price feed, read directly from Robinhood Chain, per supported ticker. This is what Parity compares the on-chain price against. It is deliberately never described as "the real price" — it is <i>a</i> reference, chosen for being independently verifiable on-chain, not a claim of ground truth about the underlying equity's actual market value.</p>
+<p><b><code>oraclePaused()</code>.</b> A boolean read directly from the Stock Token contract itself, indicating whether its own price oracle is currently paused. When true, Parity treats the token's pricing as untrustworthy for that observation, regardless of what any other source reports.</p>
+<p><b>Uniswap V3 pricing.</b> The on-chain price actually being evaluated. Pool addresses are resolved authoritatively via the Uniswap V3 factory contract (<code>factory.getPool(tokenA, tokenB, feeTier)</code>) — never computed offline and never trusted purely from configuration without that live resolution step. The pool's <code>slot0()</code> call supplies the current <code>sqrtPriceX96</code> and <code>tick</code> in one read.</p>
+<p><b>Blockscout holder data.</b> Holder-concentration statistics for context on token distribution. This source degrades gracefully — if the required API key isn't configured, holder data is reported as unavailable rather than omitted silently or blocking anything else.</p>
+<p><b>Gas telemetry.</b> A periodic, ticker-independent sample of chain gas conditions (Section 13).</p>
+<p>Each source is read independently, and a failure in one never silently corrupts or fabricates another — this per-field independence is a structural property of the snapshot itself (Section 04), not just a design intention.</p>
+</div>
+<div class="h1"><span class="idx">04</span>SNAPSHOT &AMP; HISTORY ARCHITECTURE</div>
+<div class="h1rule"></div>
+<div class="sec">
+<p>Parity's collector runs on an intended 15-minute cadence, capturing one snapshot record per supported Stock Token per run. Every record is appended to a durable, append-only JSONL file — never overwritten, never deleted, never rewritten in place. This gives Parity a genuine historical dataset that accumulates value over time: the longer Parity runs, the more precisely it can characterize what "normal" looks like for a given Stock Token, which is the entire foundation the statistical model in Sections 06–08 depends on.</p>
+<div class="diagram-wrap"><div class="pipeline">
+  <div class="pnode sources">
+    <div class="pnode-label">SOURCES</div>
+    <div class="pnode-detail">Robinhood &middot; Chainlink &middot; Uniswap V3 &middot; Blockscout</div>
+  </div>
+  <div class="parrow">&#8595;</div>
+  <div class="pnode capture">
+    <div class="pnode-label">SNAPSHOT CAPTURE</div>
+    <div class="pnode-detail">One record per Stock Token, per run &middot; append-only JSONL</div>
+  </div>
+  <div class="parrow">&#8595;</div>
+  <div class="pnode intelligence">
+    <div class="pnode-label">CANONICAL INTELLIGENCE</div>
+    <div class="pnode-detail">Baseline &middot; maturity &middot; classification &middot; episode &mdash; computed ONCE</div>
+  </div>
+  <div class="parrow">&#8595;</div>
+  <div class="pfan">
+    <div class="pnode small"><div class="pnode-label">RISK API</div></div>
+    <div class="pnode small"><div class="pnode-label">ALERT ENGINE</div></div>
+    <div class="pnode small"><div class="pnode-label">DASHBOARD</div></div>
+  </div>
+</div></div>
+<p>A malformed or truncated line in the historical file does not corrupt the rest of the dataset — the reader skips unparseable lines individually rather than failing the whole read. This matters operationally: a partial write during a crash cannot silently destroy months of accumulated history.</p>
+<p><b>Parity never silently interpolates a missing historical value.</b> If a collection run fails for a given ticker, that observation is simply absent from the record — not filled in with an estimate, not carried forward from the last known value, not smoothed over. This is a deliberate constraint with real consequences: it means Parity's persistence-episode logic (Section 09) must explicitly handle gaps rather than assume continuity, and it means a reader can trust that every data point in the historical record reflects an actual observation, never a fabricated one.</p>
+</div>
+<div class="h1"><span class="idx">05</span>DATA HEALTH VS. STATISTICAL ELIGIBILITY</div>
+<div class="h1rule"></div>
+<div class="sec">
+<p>This is one of the most important — and most easily conflated — distinctions in the entire system. Parity maintains <b>two separate, layered checks</b>, and collapsing them into a single concept would misrepresent how the product actually works.</p>
+<p><b>Layer 1 — raw data health.</b> Every snapshot is classified into one of five states: <code>healthy_current</code>, <code>stale_reference</code>, <code>oracle_paused</code>, <code>trading_halt</code>, or <code>upstream_unavailable</code>. This layer answers a narrow question: is the underlying data itself currently trustworthy and fresh enough to display at all?</p>
+<p><b>Layer 2 — statistical eligibility.</b> A stricter, separate gate layered on top of Layer 1. Even a Layer-1-healthy reading must additionally satisfy a tighter freshness requirement — the reference must be no older than <b>360 minutes</b> — before it is trusted as an input to the statistical baseline and classification machinery. A reading can be perfectly healthy by Layer 1's standard while still being ineligible by Layer 2's stricter one.</p>
+<p>The practical consequence: <b>a current deviation can be visible on the dashboard or API while classification is simultaneously unavailable.</b> This is not a bug or an inconsistency — it is the two layers doing exactly what they are designed to do. The deviation only requires Layer-1 health; classification additionally requires Layer-2 eligibility <i>and</i> a mature baseline (Section 07). Any explanation of Parity that describes eligibility as a single yes/no concept is incomplete.</p>
+</div>
+<div class="h1"><span class="idx">06</span>HISTORICAL BASELINE</div>
+<div class="h1rule"></div>
+<div class="sec">
+<p>From a Stock Token's accumulated, statistically-eligible observations, Parity builds a <b>baseline</b>: a historical <b>median</b> deviation, and a <b>baseline dispersion</b> describing how much that deviation typically varies around its median. The dispersion statistic is the <b>MAD — median absolute deviation</b>.</p>
+<p>Median and MAD were chosen deliberately over mean and standard deviation because they are resistant to distortion by a small number of extreme readings. A handful of unusual observations in a token's history should not silently drag the entire baseline off-center the way a few outliers can distort a mean — median and MAD hold steady in exactly that scenario, which matters because the whole point of the baseline is to represent <i>typical</i> behavior.</p>
+<p>A small technical safeguard exists here: <b><code>MAD_FLOOR_PCT = 0.005</code></b>. If a token's real historical dispersion happens to be extremely small (or briefly zero), dividing by that tiny number would produce an artificially enormous multiple for even a modest deviation — a floor prevents that distortion without changing what the statistic means.</p>
+<div class="callout"><div class="callout-label"><b>Formula, for readers who want it (not required to understand the system):</b></div><div class="callout-body"><code>MAD multiple = |current deviation − historical median| / max(baseline dispersion, MAD_FLOOR_PCT)</code></div></div>
+<p>The result — the <b>MAD multiple</b> — measures how far the current deviation sits from the historical median, expressed as a multiple of the baseline dispersion. It is the single number classification (Section 08) is actually measured against. It is never referred to as a z-score (it is a robust, median-based statistic, not a mean/standard-deviation one), and never described using informal "x typical" phrasing.</p>
+</div>
+<div class="h1"><span class="idx">07</span>MATURITY</div>
+<div class="h1rule"></div>
+<div class="sec">
+<p>A baseline is only as trustworthy as the history behind it. Parity tracks <b>maturity</b> to ensure classification is never produced from a baseline too young or too thin to mean anything — a form of protection against false precision.</p>
+<p><b><code>INSUFFICIENT_DATA</code></b> — fewer than 20 observations, <b>or</b> less than 24 elapsed hours of history. No baseline exists yet; nothing is computed.</p>
+<p><b><code>DEVELOPING</code></b> — a baseline exists but hasn't yet cleared the MATURE bar below. Deviation may still be genuinely visible at this stage (Section 05 explains why), but classification, MAD multiple, and episode detail are not yet produced from it.</p>
+<p><b><code>MATURE</code></b> — at least <b>200 observations AND</b> at least <b>96 elapsed hours</b>. Both conditions are required together, not either alone. Only a MATURE baseline produces a classification.</p>
+<div class="diagram-wrap"><div class="maturity-flow">
+  <div class="mstage m1"><div class="mname">INSUFFICIENT_DATA</div><div class="mcond">&lt;20 observations OR &lt;24 elapsed hours</div></div>
+  <div class="marrow">&#8594;</div>
+  <div class="mstage m2"><div class="mname">DEVELOPING</div><div class="mcond">Baseline exists, not yet MATURE</div></div>
+  <div class="marrow">&#8594;</div>
+  <div class="mstage m3"><div class="mname">MATURE</div><div class="mcond">&ge;200 observations AND &ge;96 elapsed hours</div></div>
+</div>
+<div class="mature-note">Only a MATURE baseline produces a classification.</div></div>
+<p>This gating exists because a thin history cannot yet reliably represent "typical" behavior for a token — reporting a confident-sounding classification from a handful of observations would manufacture a false sense of precision the underlying data doesn't actually support. A young Stock Token is honestly reported as still developing, not forced into a premature verdict.</p>
+</div>
+<div class="h1"><span class="idx">08</span>CLASSIFICATION</div>
+<div class="h1rule"></div>
+<div class="sec">
+<p>Once a baseline is MATURE and the current observation is eligible, Parity classifies the current deviation into one of four tiers, based on its MAD multiple <b>and</b> its absolute magnitude — both conditions required together, not either alone:</p>
+<table class="doc-table"><thead><tr><th>Tier</th><th>MAD multiple</th><th>Absolute deviation</th></tr></thead><tbody><tr><td>NORMAL</td><td>below all thresholds below</td><td>—</td></tr><tr><td>ELEVATED</td><td>≥ 2.0×</td><td>≥ 0.10%</td></tr><tr><td>DISLOCATED</td><td>≥ 3.5×</td><td>≥ 0.25%</td></tr><tr><td>SEVERE</td><td>≥ 5.0×</td><td>≥ 0.50%</td></tr></tbody></table>
+<div class="diagram-wrap"><div class="tiers">
+  <div class="tier n"><div class="bar"></div><div class="name">NORMAL</div><div class="desc">Consistent with this token&rsquo;s own baseline.</div></div>
+  <div class="tier e"><div class="bar"></div><div class="name">ELEVATED</div><div class="desc">&ge;2.0&times; &middot; &ge;0.10%</div></div>
+  <div class="tier d"><div class="bar"></div><div class="name">DISLOCATED</div><div class="desc">&ge;3.5&times; &middot; &ge;0.25%</div></div>
+  <div class="tier s"><div class="bar"></div><div class="name">SEVERE</div><div class="desc">&ge;5.0&times; &middot; &ge;0.50%</div></div>
+</div></div>
+<p>The dual condition exists because relative abnormality alone is not sufficient information. A token with an extremely tight historical baseline could register a huge MAD multiple from a deviation that is, in absolute terms, negligible — the absolute floor prevents classification from firing on statistically-large-but-practically-meaningless movement. Conversely, the relative condition prevents a token with naturally wide historical dispersion from being classified abnormal simply because its ordinary variation happens to be numerically larger than another token's.</p>
+<div class="callout"><div class="callout-label"><b>CRITICAL CAVEAT — read this before quoting any threshold above:</b></div><div class="callout-body">These four tiers and their exact thresholds are current operating hypotheses about relative abnormality — <b>not empirically validated risk boundaries.</b> They describe distance from a Stock Token's own history, not a proven measure of danger, and they have not yet been validated against long-run outcome data. Treat classification as a relative-abnormality signal, never as a validated risk score.</div></div>
+</div>
+<div class="h1"><span class="idx">09</span>PERSISTENCE &AMP; EPISODES</div>
+<div class="h1rule"></div>
+<div class="sec">
+<p>A single abnormal reading and a sustained abnormal condition are genuinely different situations, and collapsing that distinction would discard one of the more useful parts of the signal. Parity tracks this via <b>episodes</b> — a continuous run of non-NORMAL classification for a given Stock Token.</p>
+<p>An episode's continuity is governed by explicit, honest rules, not assumption:</p>
+<ul class="doc-list"><li><b>The observation-gap rule.</b> If the time between two consecutive real records exceeds <b>30 minutes</b>, they are not treated as temporally continuous — a genuine collection gap correctly breaks episode continuity rather than being silently bridged. Parity never assumes an abnormal condition persisted through a gap it has no actual observation for.</li><li><b>Invalid or ineligible readings break continuity.</b> A reading that fails eligibility does not count as "still abnormal" — it is treated honestly as a break, not folded into the surrounding episode.</li><li><b>A NORMAL reading always ends an episode.</b> By definition, an episode is a run of non-NORMAL states; the moment a NORMAL reading occurs, the episode ends.</li><li><b>No interpolation, ever.</b> A gap in the data is a gap — never smoothed, never filled with an assumed value, never treated as if it didn't happen.</li></ul>
+<p>Duration matters because it changes what a reading actually tells a reader. A dislocation that has held for six hours is a materially different situation from one that appeared once and vanished, even if the instantaneous classification looks identical in both cases. Episodes are how Parity preserves that difference rather than flattening it into a single point-in-time label.</p>
+</div>
+<div class="h1"><span class="idx">10</span>ALERT ENGINE</div>
+<div class="h1rule"></div>
+<div class="sec">
+<p>Parity's alert engine is a pure consumer of already-computed canonical intelligence — it does not compute a second, independent model of risk. It reads the same <code>RiskViewModel</code> the API and dashboard read, compares the current classification to the immediately preceding one for that Stock Token, and decides whether a specific kind of transition occurred.</p>
+<p>Three transitions produce an alert:</p>
+<ul class="doc-list"><li><b><code>NORMAL → abnormal</code></b> → <code>new_risk</code></li><li><b><code>abnormal → more severe abnormal</code></b> → <code>escalation</code> (e.g. ELEVATED → DISLOCATED)</li><li><b><code>abnormal → NORMAL</code></b> → <code>recovery</code></li></ul>
+<div class="diagram-wrap"><div class="alert-flow">
+  <div class="aflow-row">
+    <span class="achip normal">NORMAL</span><span class="aop">&#8594;</span><span class="achip abn">ABNORMAL</span>
+    <span class="aevent new">new_risk</span>
+  </div>
+  <div class="aflow-row">
+    <span class="achip abn">ABNORMAL</span><span class="aop">&#8594;</span><span class="achip abn-more">MORE SEVERE</span>
+    <span class="aevent esc">escalation</span>
+  </div>
+  <div class="aflow-row">
+    <span class="achip abn">ABNORMAL</span><span class="aop">&#8594;</span><span class="achip normal">NORMAL</span>
+    <span class="aevent rec">recovery</span>
+  </div>
+  <div class="aflow-row noalert">
+    <span class="achip abn">ABNORMAL</span><span class="aop">&#8594;</span><span class="achip abn-less">LESS SEVERE</span>
+    <span class="aevent none">no alert</span>
+  </div>
+  <div class="aflow-row noalert">
+    <span class="achip null">null</span><span class="aop">&#8594;</span><span class="achip anything">anything</span>
+    <span class="aevent none">no alert</span>
+  </div>
+</div></div>
+<p>No alert fires for: the same classification repeated; a downgrade between two abnormal tiers (e.g. SEVERE easing to DISLOCATED) — a deliberate choice, since inventing a "partial improvement" alert without a designed, validated semantic for it would be worse than staying silent; or any transition where either the previous or current classification is null, since a gap in visibility cannot be reliably distinguished from a genuine transition.</p>
+<p><b>Deduplication is durable, not in-memory.</b> Parity records the timestamp of the last snapshot it evaluated for each Stock Token, persisted to disk. A snapshot at or before that recorded timestamp is treated as already-processed and never re-evaluated — this behavior survives a process restart, since the check is against durably-stored state, not memory that would reset on restart.</p>
+<p><b>Delivery</b> defaults to a structured log line; an optional Discord webhook can be configured as an alternative delivery target. <b>This is explicitly not a reliable-delivery system today</b>: if a Discord delivery attempt fails after alert state has already durably advanced (which happens before delivery is even attempted), the event cannot currently be recovered by replaying the same snapshot — deduplication will correctly, if unhelpfully in this specific case, treat that snapshot as already handled. A durable outbox/retry mechanism is a deliberately deferred, later concern, not a claim this document should make about current behavior.</p>
+</div>
+<div class="h1"><span class="idx">11</span>RISK API</div>
+<div class="h1rule"></div>
+<div class="sec">
+<p><code>GET /api/v1/risk/:symbol</code> exposes exactly the same canonical intelligence used internally — it does not run a separate computation path. The response includes the current deviation and its direction, a P2 reference-status field, a P3 eligibility boolean, maturity, the baseline statistics (historical median, baseline dispersion, MAD multiple), classification, and active episode detail where available.</p>
+<p><code>apiVersion: "v1"</code> appears on every response, success or error. The rate limit is <b>60 requests per minute per client IP</b>, enforced only on this route; exceeding it returns HTTP 429 with a truthful <code>Retry-After</code> header. An unsupported symbol returns <code>unsupported_ticker</code> (404); a supported symbol with no captured data yet returns the deliberately distinct <code>no_data_yet</code> (404) — "not available yet," never "will never exist here."</p>
+<p>The eligibility field is intentionally a plain boolean today, without a granular reason, because the underlying engine does not yet preserve the specific distinction between a Layer-1 health failure and a Layer-2 eligibility failure all the way through to this contract. Inventing a plausible-sounding reason the product cannot actually stand behind would be worse than the current honest boolean.</p>
+</div>
+<div class="h1"><span class="idx">12</span>EXECUTION / LIQUIDITY TELEMETRY</div>
+<div class="h1rule"></div>
+<div class="sec">
+<p>Parity has begun preserving raw execution/liquidity telemetry per supported Stock Token, per snapshot: <code>poolSqrtPriceX96</code> and <code>poolTick</code> (preserved from the same pool read the pricing logic already performs, at zero additional cost), <code>poolFeeTierBps</code> (a known configuration constant), <code>poolLiquidity</code> (the pool's active liquidity at its current tick), and <code>poolToken0Balance</code>/<code>poolToken1Balance</code> (the pool contract's raw reserve balances).</p>
+<div class="callout"><div class="callout-label"><b>RAW TELEMETRY ≠ EXECUTION INTELLIGENCE</b></div><div class="callout-body">A Uniswap V3 pool's liquidity is concentrated at specific price ticks, not spread evenly across all prices — <code>poolLiquidity</code> describes what's active near the current tick, not the pool's whole story. Raw token balances are the pool's <i>total</i> reserve across every tick, which can substantially overstate what is actually tradeable near the current price. None of these raw fields have been converted into a slippage estimate, a liquidity score, or an execution score anywhere in the product today, and none should be read as one.</div></div>
+<p>This telemetry is being collected now specifically because it cannot be reconstructed retroactively — any historical pool state before this capability existed is permanently unavailable. Collecting it preserves the option to build genuine execution/liquidity intelligence later, without pretending that capability already exists today.</p>
+</div>
+<div class="h1"><span class="idx">13</span>GAS TELEMETRY</div>
+<div class="h1rule"></div>
+<div class="sec">
+<p>Independently of any specific Stock Token, Parity samples general chain conditions once per collection run: block number, block timestamp, and base fee per gas. This is general network-fee context — it does not measure per-transaction cost, per-ticker gas usage, or anything Stock-Token-specific, and it should not be read as measuring more than what it actually samples.</p>
+</div>
+<div class="h1"><span class="idx">14</span>PRODUCT PRINCIPLES</div>
+<div class="h1rule"></div>
+<div class="sec">
+<p><b>Independent.</b> Parity is not affiliated with Robinhood. It observes public, verifiable data and reports what it finds.</p>
+<p><b>Read-only.</b> Parity does not execute trades, custody assets, or take any action on a user's behalf.</p>
+<p><b>Data-honest.</b> Unavailable data is reported as unavailable — never silently substituted with zero, never quietly filled in with a guess. An exact 0.00% reading is a real, distinct measurement, never confused with "no data."</p>
+<p><b>No financial advice, no buy/sell signals, no guaranteed arbitrage.</b> Every classification, deviation, and alert describes an observed condition relative to history — never an instruction, a prediction, or a recommendation.</p>
+<p><b>No invented certainty.</b> Where the product genuinely doesn't know something — a granular eligibility reason, a slippage figure, a validated risk boundary — it says so rather than manufacturing a plausible-sounding answer it cannot stand behind.</p>
+<p><b>One canonical intelligence model, reused everywhere.</b> The dashboard, the Risk API, and the alert engine all read the same underlying computation. Nothing is independently recomputed for a different surface, which means there is exactly one place classification logic can be wrong, and exactly one place it needs to be right.</p>
+</div>
+<div class="h1"><span class="idx">15</span>LIMITATIONS</div>
+<div class="h1rule"></div>
+<div class="sec">
+<p>Stated plainly, without hedging:</p>
+<ul class="doc-list"><li>Only <b>six</b> Stock Tokens are currently supported (AAPL, GOOGL, USO, SPCX, TSLA, NVDA) — this reflects which pools are currently independently verified, not a ceiling on the architecture.</li><li>Pricing is <b>Uniswap V3 only</b>; there is no V4 support today.</li><li>Classification thresholds are unvalidated operating hypotheses, not proven risk boundaries.</li><li>The Risk API's <code>eligibility</code> field does not currently expose a granular reason.</li><li>No slippage engine, liquidity score, or execution score exists in the product today.</li><li>Alert delivery has no retry or durable outbox mechanism — a failed delivery after state has advanced is not currently recoverable.</li><li>Historical execution/liquidity telemetry before P5-C0 was never captured and cannot be reconstructed.</li><li>Upstream data freshness and market-hour behavior depend entirely on the underlying sources (Chainlink, Robinhood, the pool itself) — Parity's own collector runs continuously, but a source updating (or not) outside traditional market hours is a property of that source, not something Parity controls.</li></ul>
+</div>
+<div class="h1"><span class="idx">16</span>FUTURE DIRECTION</div>
+<div class="h1rule"></div>
+<div class="sec">
+<p><i>Everything in this section is planned or aspirational — none of it is current capability, and nothing here should be read as an existing feature.</i></p>
+<p>Broader Stock Token coverage, as more pools are independently verified. Richer market-integrity intelligence beyond the current four-tier classification. Genuine execution/liquidity intelligence built on top of the raw telemetry already being preserved (Section 12) — but only once that capability is deliberately designed and validated, not assumed from the existence of raw data. Deeper historical analytics as the accumulated dataset grows. Institutional and API-driven use cases as the developer contract matures. Expanded alert semantics, potentially including the currently-silent downgrade case (Section 10), once a validated design exists for it.</p>
+<p>None of this changes what Parity is today: a read-only instrument that observes verified data and reports statistically-grounded context about it — nothing more, and nothing invented ahead of what the data can actually support.</p>
+</div>
+
+
+<div class="docfoot">
+  <span class="micro">PARITY · Read-only intelligence over verified on-chain data</span>
+</div>
+
+</body></html>
