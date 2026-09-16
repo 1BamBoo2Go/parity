@@ -1,47 +1,62 @@
-# Parity (Buildathon v0 — Slices P0 + P1)
+# Parity — Risk Intelligence for Stock Tokens
 
-Independent Robinhood Stock Token parity intelligence: is a token still trading at parity with the reference value it's supposed to represent?
+Parity continuously observes on-chain and reference data for Robinhood Chain Stock Tokens and reports how closely each one is trading to parity with what it is meant to represent — both right now and relative to its own recent history. It is independent, read-only, and reports observed conditions rather than recommendations: no buy/sell signals, no guaranteed arbitrage, no execution or liquidity scores.
 
-**Status: Slice P0 (bootstrap + live ground-truth proof) and Slice P1 (verified ticker coverage expansion) are both complete, live-network-verified, and committed.** See `evidence/P0-EVIDENCE-REPORT.md` and `evidence/P1-EVIDENCE-REPORT.md` for the full history — including the real bugs found and fixed along the way — and the corresponding `evidence/p*-external-pass-final.txt` files for the final passing runs.
+**Core question:** *"Is this Stock Token still trading at parity with what it is supposed to represent?"*
 
-## Supported ticker coverage (as of Slice P1)
+## Current capabilities
 
-| Ticker | Status |
-|---|---|
-| AAPL, GOOGL, USO, SPCX | Supported (Slice P0) |
-| TSLA, NVDA | Supported (Slice P1) |
-| MSFT, SPY, QQQ | Explicitly unverified/incomplete — real, live tickers, but missing a verified Chainlink feed (and, for MSFT/QQQ, also a verified pool). See `evidence/P1-EVIDENCE-REPORT.md` for exactly what's missing and why. |
-| HOOD | Confirmed unsupported (no published Chainlink feed) — kept as a deliberate negative test case. |
+- **Dashboard** (`public/`) — a live instrument view of every supported Stock Token's current deviation, classification, and history, reading the same canonical intelligence as the API and alerts (never a separately computed value). Run with `npm run dashboard`.
+- **Historical intelligence** (`src/intelligence/`) — a per-token historical baseline (median deviation, MAD dispersion), maturity gating (`INSUFFICIENT_DATA` / `DEVELOPING` / `MATURE`), four-tier classification (`NORMAL` / `ELEVATED` / `DISLOCATED` / `SEVERE`), and persistence-episode tracking. Classification thresholds are current operating hypotheses about relative abnormality, not empirically validated risk boundaries — see `docs/primer/parity-technical-primer.md` for the full model.
+- **Risk API** (`GET /api/v1/risk/:symbol`) — a versioned, rate-limited (60 req/min/IP) HTTP endpoint exposing the same canonical intelligence programmatically. Documented in `docs/api-v1.md`.
+- **Alert engine** (`src/alerts/`) — a pure consumer of canonical intelligence that detects `new_risk`, `escalation`, and `recovery` classification transitions, with durable, restart-safe deduplication. Delivers to a structured log by default, or optionally to Discord via the `DISCORD_ALERT_WEBHOOK_URL` environment variable.
+- **Execution/liquidity telemetry** (P5-C0) — per-snapshot preservation of raw on-chain pool state (`sqrtPriceX96`, `tick`, fee tier, active liquidity, raw token reserve balances). **This is raw historical collection only** — Parity does not currently compute slippage, executable depth, or any liquidity/execution score from this data, and a raw pool balance is not the same thing as executable depth (V3 liquidity is concentrated at specific ticks, not spread evenly). See Section 12 of the Technical Primer for the full caveat.
+- **Gas telemetry** — a periodic, ticker-independent sample of block number, block timestamp, and base fee per gas.
 
-## What P0 proved
+## Supported Stock Tokens
 
-Every P0 data path has been proven against real, live infrastructure: Robinhood's registry and price APIs, Robinhood Chain's public RPC, Chainlink's on-chain feeds, live Uniswap V3 pool resolution with correct decimals/orientation normalization, and real holder-concentration data via Blockscout. The full incident history — including a genuine decimals/orientation bug the first external run caught, and how it was diagnosed and fixed — is preserved in `evidence/P0-EVIDENCE-REPORT.md` rather than quietly edited away, because that history is itself part of this project's evidence trail.
+AAPL, GOOGL, USO, SPCX, TSLA, NVDA — reflecting which tickers currently have an independently verified on-chain pool Parity trusts as a pricing source. This list grows as more pools are verified; it is not a ceiling on the architecture.
 
-## Quickstart (from a normal, internet-connected machine)
+## Documentation
+
+- [`docs/api-v1.md`](docs/api-v1.md) — Risk API v1 contract
+- [`docs/manifesto/parity-mini-manifesto.md`](docs/manifesto/parity-mini-manifesto.md) — a short introduction to why Parity exists (also available as a designed PDF)
+- [`docs/faq/parity-faq.md`](docs/faq/parity-faq.md) — 64-question FAQ covering the full product (also available as a designed PDF)
+- [`docs/primer/parity-technical-primer.md`](docs/primer/parity-technical-primer.md) — the complete technical/philosophical account of the system: data sources, statistical model, alert engine, API, limitations, and future direction (also available as a designed PDF)
+
+## Quickstart
 
 ```bash
 npm install
-npm run typecheck   # should be clean
-npm test            # 29/29 should pass
-npx eslint .         # should be clean
-npm run build        # should succeed
+npm run typecheck    # clean
+npm test              # 400/400 passing
+npm run lint           # clean
+npm run build           # clean
 
-npm run prove:p0     # THE live ground-truth proof — see evidence/P0-EVIDENCE-REPORT.md
-                      # for what success looks like and what would still block P0
+npm run dashboard       # serves the live dashboard + API on PORT (default 3000)
+npm run snapshot        # runs one collection cycle manually (intended cadence: every 15 minutes via cron)
 ```
 
-No API key is required to run P0 end to end (confirmed live). An optional `BLOCKSCOUT_API_KEY` environment variable enables a documented fallback path for holder-concentration data if Blockscout's free per-instance endpoint is unavailable in your environment — see `src/sources/blockscoutHolders.ts` and `evidence/PROVENANCE.md` for details. Never hardcode this key; it is read only from the environment and is never committed to this repository.
+No API key is required for core operation. An optional `BLOCKSCOUT_API_KEY` environment variable enables a documented fallback path for holder-concentration data — see `src/sources/blockscoutHolders.ts`. An optional `DISCORD_ALERT_WEBHOOK_URL` environment variable enables Discord alert delivery in place of the default structured log — see `src/alerts/discordAlertDelivery.ts`. Neither is ever hardcoded or committed; both are read only from the environment.
 
 ## What's in here
 
-- `src/domain/` — pure calculation logic (premium/discount math, decimals normalization, the Chainlink-multiplier double-application guard, staleness detection). Fully unit-tested, no I/O.
-- `src/sources/` — real client code for each upstream data source (Robinhood registry + prices, Chainlink feed reads, Uniswap V3 pool resolution, Blockscout holders, plain ERC-20 reads).
-- `src/parity/` — the orchestrator that safely composes a `ParitySnapshot`, enforcing "missing data never becomes zero," "stale data is never presented as current," and "unsupported is never presented as healthy."
+- `src/domain/` — pure calculation logic (premium/discount math, decimals normalization, staleness detection). Fully unit-tested, no I/O.
+- `src/sources/` — client code for each upstream data source (Robinhood registry + prices, Chainlink feed reads, Uniswap V3 pool resolution and telemetry, Blockscout holders, ERC-20 reads).
+- `src/snapshot/` — periodic capture and durable, append-only historical storage (one record per Stock Token per run; malformed lines never corrupt the rest of the file).
+- `src/intelligence/` — the canonical statistical model: baseline, maturity, classification, persistence episodes.
+- `src/readmodel/` — projects canonical intelligence into the shapes the dashboard and Risk API each need, without recomputing it.
+- `src/alerts/` — the alert decision engine, durable state/deduplication, and delivery (structured log, optional Discord).
+- `src/web/` — the Express server: dashboard routes, the Risk API, and rate limiting.
 - `src/config/` — network definitions and the candidate ticker registry, with a citation on every field.
-- `scripts/proveP0.ts` — the actual live-proof CLI (see Quickstart above).
-- `scripts/computeSelectors.ts` / `scripts/crossCheckSelectors.ts` — independent, from-scratch verification of every non-standard ABI function selector this project relies on.
-- `evidence/` — `PROVENANCE.md` (what every number means and where it comes from) and `P0-EVIDENCE-REPORT.md` (exactly what has and hasn't been live-verified).
+- `scripts/` — the real collector (`captureSnapshot.ts`), the dashboard server (`serveDashboard.ts`), the original P0 live-proof CLI (`proveP0.ts`), and independent ABI selector verification tooling.
+- `docs/` — the current documentation suite (API contract, manifesto, FAQ, technical primer).
+- `evidence/` — the project's original P0–P2 live-verification reports and raw pass/fail run output, preserved as historical evidence rather than edited away.
 
-## Explicitly out of scope for this slice
+## Known limitations
 
-No dashboard/UI, no Arcus/pToken integration, no liquidation heatmaps, no cross-protocol modeling, no automated execution or recommendations, no universal ticker coverage, no full historical charting. See the project brief for the frozen v0 scope.
+Stated plainly (see `docs/primer/parity-technical-primer.md`, Section 15 for the complete list): only six Stock Tokens are currently supported; pricing is Uniswap V3 only (no V4 support today); classification thresholds are unvalidated operating hypotheses; the Risk API's eligibility field does not yet expose a granular reason; there is no slippage engine, liquidity score, or execution score; alert delivery has no retry/outbox mechanism; historical execution/liquidity telemetry before P5-C0 cannot be reconstructed.
+
+## License
+
+Not yet finalized — no licensing decision has been made pending confirmation of Buildathon submission requirements.

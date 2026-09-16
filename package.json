@@ -1,7 +1,7 @@
 {
   "name": "parity",
-  "version": "0.1.0-p0",
-  "description": "Independent Robinhood Chain Stock Token parity (reference vs secondary-market price) intelligence. Buildathon v0 slice P0: live data-path proof.",
+  "version": "0.5.0",
+  "description": "Independent, read-only risk intelligence for Robinhood Chain Stock Tokens: historical baseline, classification, alerting, a versioned Risk API, and raw execution/liquidity telemetry collection.",
   "type": "module",
   "private": true,
   "license": "UNLICENSED",
