@@ -1,5 +1,7 @@
 # Parity — Risk Intelligence for Stock Tokens
 
+**Live production dashboard: [https://parity.nodehq.net](https://parity.nodehq.net)**
+
 Parity continuously observes on-chain and reference data for Robinhood Chain Stock Tokens and reports how closely each one is trading to parity with what it is meant to represent — both right now and relative to its own recent history. It is independent, read-only, and reports observed conditions rather than recommendations: no buy/sell signals, no guaranteed arbitrage, no execution or liquidity scores.
 
 **Core question:** *"Is this Stock Token still trading at parity with what it is supposed to represent?"*
@@ -8,7 +10,7 @@ Parity continuously observes on-chain and reference data for Robinhood Chain Sto
 
 - **Dashboard** (`public/`) — a live instrument view of every supported Stock Token's current deviation, classification, and history, reading the same canonical intelligence as the API and alerts (never a separately computed value). Run with `npm run dashboard`.
 - **Historical intelligence** (`src/intelligence/`) — a per-token historical baseline (median deviation, MAD dispersion), maturity gating (`INSUFFICIENT_DATA` / `DEVELOPING` / `MATURE`), four-tier classification (`NORMAL` / `ELEVATED` / `DISLOCATED` / `SEVERE`), and persistence-episode tracking. Classification thresholds are current operating hypotheses about relative abnormality, not empirically validated risk boundaries — see `docs/primer/parity-technical-primer.md` for the full model.
-- **Risk API** (`GET /api/v1/risk/:symbol`) — a versioned, rate-limited (60 req/min/IP) HTTP endpoint exposing the same canonical intelligence programmatically. Documented in `docs/api-v1.md`.
+- **Risk API** (`GET /api/v1/risk/:symbol`) — a versioned, rate-limited (60 req/min/IP) HTTP endpoint exposing the same canonical intelligence programmatically. Documented in `docs/api-v1.md`. Live example: `https://parity.nodehq.net/api/v1/risk/AAPL`
 - **Alert engine** (`src/alerts/`) — a pure consumer of canonical intelligence that detects `new_risk`, `escalation`, and `recovery` classification transitions, with durable, restart-safe deduplication. Delivers to a structured log by default, or optionally to Discord via the `DISCORD_ALERT_WEBHOOK_URL` environment variable.
 - **Execution/liquidity telemetry** (P5-C0) — per-snapshot preservation of raw on-chain pool state (`sqrtPriceX96`, `tick`, fee tier, active liquidity, raw token reserve balances). **This is raw historical collection only** — Parity does not currently compute slippage, executable depth, or any liquidity/execution score from this data, and a raw pool balance is not the same thing as executable depth (V3 liquidity is concentrated at specific ticks, not spread evenly). See Section 12 of the Technical Primer for the full caveat.
 - **Gas telemetry** — a periodic, ticker-independent sample of block number, block timestamp, and base fee per gas.
@@ -51,7 +53,7 @@ No API key is required for core operation. An optional `BLOCKSCOUT_API_KEY` envi
 - `src/config/` — network definitions and the candidate ticker registry, with a citation on every field.
 - `scripts/` — the real collector (`captureSnapshot.ts`), the dashboard server (`serveDashboard.ts`), the original P0 live-proof CLI (`proveP0.ts`), and independent ABI selector verification tooling.
 - `docs/` — the current documentation suite (API contract, manifesto, FAQ, technical primer).
-- `evidence/` — the project's original P0–P2 live-verification reports and raw pass/fail run output, preserved as historical evidence rather than edited away.
+- `evidence/` — the project's original P0–P2 live-verification reports, raw pass/fail run output, and `RECOVERY.md` (repository reconstruction/provenance record), preserved as historical evidence rather than edited away.
 
 ## Known limitations
 

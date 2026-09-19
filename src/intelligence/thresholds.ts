@@ -4,9 +4,9 @@
  *
  * IMPORTANT — READ BEFORE CHANGING ANY NUMBER IN THIS FILE:
  * Every threshold below is an INITIAL OPERATING HYPOTHESIS, not an
- * empirically validated risk boundary. The production collector
- * (/root/parity-live) only recently began accumulating 15-minute
- * observations, so none of these numbers were derived by fitting real
+ * empirically validated risk boundary. The production collector only
+ * recently began accumulating 15-minute observations, so none of these
+ * numbers were derived by fitting real
  * historical dislocation data — there isn't enough of it yet. They were
  * chosen to be internally consistent, individually justified (see the
  * comment on each constant), and consistent with the two worked examples

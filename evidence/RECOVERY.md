@@ -1,5 +1,13 @@
 # Recovery Provenance — Canonical P3 Baseline
 
+> **Context for readers encountering this document for the first time:**
+> This is a historical provenance record, not an active incident report. It
+> documents a one-time repository reconstruction event from early in the
+> project (2026-09-11) and the verification steps taken to confirm nothing
+> was lost or altered in the process. It is preserved here, alongside the
+> project's other evidence reports, in the same spirit of transparency —
+> nothing below has been rewritten or softened after the fact.
+
 This repository was re-initialized on 2026-09-11 after the development
 sandbox's filesystem was reset, which destroyed the original `.git` object
 database. This document records exactly what was recovered, from where, and
@@ -83,7 +91,7 @@ recovered source.
   that were explicitly rejected during the P4 art-direction round, and the
   locked visual specification supersedes them entirely.
 
-`/root/parity-live` on the VPS was deployed from source archives rather than
+The production deployment on the VPS was deployed from source archives rather than
 as a git checkout, so it holds no recoverable history either.
 
 ## Approved P4 visual specification
