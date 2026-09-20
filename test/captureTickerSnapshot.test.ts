@@ -402,7 +402,7 @@ describe("captureTickerSnapshot — P5-C0 execution/liquidity telemetry", () => 
   it("historical/additive compatibility: an old record shape (no telemetry fields at all) is still a structurally valid TickerSnapshotRecord", async () => {
     // Simulates reading a pre-P5-C0 historical record back from disk —
     // exactly what readJsonLines would hand back for an old line.
-    const oldRecord: Omit<Awaited<ReturnType<typeof captureTickerSnapshot>>, "poolSqrtPriceX96" | "poolTick" | "poolFeeTierBps" | "poolLiquidity" | "poolToken0Balance" | "poolToken1Balance"> = {
+    const oldRecord: Omit<Awaited<ReturnType<typeof captureTickerSnapshot>>, "poolSqrtPriceX96" | "poolTick" | "poolFeeTierBps" | "poolLiquidity" | "poolToken0Balance" | "poolToken1Balance" | "poolToken0Address" | "poolToken1Address" | "poolToken0Decimals" | "poolToken1Decimals"> = {
       recordType: "ticker_snapshot",
       runId: "old-run",
       capturedAt: "2026-08-01T00:00:00.000Z",
@@ -423,5 +423,125 @@ describe("captureTickerSnapshot — P5-C0 execution/liquidity telemetry", () => 
     const asFullRecord: Awaited<ReturnType<typeof captureTickerSnapshot>> = oldRecord;
     expect(asFullRecord.poolLiquidity).toBeUndefined();
     expect(asFullRecord.poolFeeTierBps).toBeUndefined();
+    expect(asFullRecord.poolToken0Address).toBeUndefined();
+    expect(asFullRecord.poolToken0Decimals).toBeUndefined();
+  });
+
+  it("P6-A0: persists the pool's authoritative live token0/token1 addresses, matching the same read secondaryPrice uses", async () => {
+    const deps = fullyWorkingDeps();
+    const token0 = aapl.tokenAddressMainnet as `0x${string}`;
+    const token1 = "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168" as `0x${string}`;
+    deps.readSpotPrice = async () => ({
+      poolAddress: "0xf4ACdAEEB7022862A763C9B1B885e11191c889E3" as `0x${string}`,
+      sqrtPriceX96: realisticSqrtPriceX96(),
+      tick: -74959,
+      token0,
+      token1,
+      rawPriceToken1PerToken0: 0,
+    });
+    const record = await captureTickerSnapshot(aapl, registry, fakeClient, "test-run", deps);
+
+    expect(record.poolToken0Address?.status).toBe("ok");
+    expect(record.poolToken0Address?.status === "ok" && record.poolToken0Address.value).toBe(token0);
+    expect(record.poolToken1Address?.status).toBe("ok");
+    expect(record.poolToken1Address?.status === "ok" && record.poolToken1Address.value).toBe(token1);
+  });
+
+  it("P6-A0: persists decimals corresponding to the correct token address/order, not swapped", async () => {
+    const deps = fullyWorkingDeps();
+    const token0 = aapl.tokenAddressMainnet as `0x${string}`;
+    const token1 = "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168" as `0x${string}`;
+    deps.readSpotPrice = async () => ({
+      poolAddress: "0xf4ACdAEEB7022862A763C9B1B885e11191c889E3" as `0x${string}`,
+      sqrtPriceX96: realisticSqrtPriceX96(),
+      tick: -74959,
+      token0,
+      token1,
+      rawPriceToken1PerToken0: 0,
+    });
+    // Deliberately asymmetric decimals per address, so a swapped-order bug would be caught.
+    deps.readDecimals = async (_client, tokenAddress) => (tokenAddress === token0 ? 18 : 6);
+    const record = await captureTickerSnapshot(aapl, registry, fakeClient, "test-run", deps);
+
+    expect(record.poolToken0Decimals?.status).toBe("ok");
+    expect(record.poolToken0Decimals?.status === "ok" && record.poolToken0Decimals.value).toBe(18);
+    expect(record.poolToken1Decimals?.status).toBe("ok");
+    expect(record.poolToken1Decimals?.status === "ok" && record.poolToken1Decimals.value).toBe(6);
+  });
+
+  it("P6-A0: when no pool resolves this run, the four new metadata fields are honestly unavailable, never fabricated", async () => {
+    const deps = fullyWorkingDeps();
+    deps.resolvePool = async () => null;
+    const record = await captureTickerSnapshot(aapl, registry, fakeClient, "test-run", deps);
+
+    expect(record.poolToken0Address?.status).toBe("unavailable");
+    expect(record.poolToken1Address?.status).toBe("unavailable");
+    expect(record.poolToken0Decimals?.status).toBe("unavailable");
+    expect(record.poolToken1Decimals?.status).toBe("unavailable");
+  });
+
+  it("P6-A0: a decimals-read failure leaves addresses, tick, sqrtPriceX96, liquidity, and balances all unaffected", async () => {
+    const deps = fullyWorkingDeps();
+    const token0 = aapl.tokenAddressMainnet as `0x${string}`;
+    const token1 = "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168" as `0x${string}`;
+    deps.readSpotPrice = async () => ({
+      poolAddress: "0xf4ACdAEEB7022862A763C9B1B885e11191c889E3" as `0x${string}`,
+      sqrtPriceX96: realisticSqrtPriceX96(),
+      tick: -74959,
+      token0,
+      token1,
+      rawPriceToken1PerToken0: 0,
+    });
+    deps.readDecimals = async () => {
+      throw new Error("simulated decimals() revert");
+    };
+    const record = await captureTickerSnapshot(aapl, registry, fakeClient, "test-run", deps);
+
+    // Decimals honestly unavailable (coupled to the shared secondaryPrice
+    // computation failing, as documented) ...
+    expect(record.poolToken0Decimals?.status).toBe("unavailable");
+    expect(record.poolToken1Decimals?.status).toBe("unavailable");
+    // ... but addresses, tick, sqrtPriceX96, liquidity, and balances are
+    // completely unaffected, since they come from independent reads.
+    expect(record.poolToken0Address?.status).toBe("ok");
+    expect(record.poolToken1Address?.status).toBe("ok");
+    expect(record.poolTick?.status).toBe("ok");
+    expect(record.poolSqrtPriceX96?.status).toBe("ok");
+    expect(record.poolLiquidity?.status).toBe("ok");
+    expect(record.poolToken0Balance?.status).toBe("ok");
+    expect(record.poolToken1Balance?.status).toBe("ok");
+  });
+
+  it("P6-A0: historical/additive compatibility — an old record shape lacking the four new metadata fields is still structurally valid", async () => {
+    const oldRecord: Omit<Awaited<ReturnType<typeof captureTickerSnapshot>>, "poolToken0Address" | "poolToken1Address" | "poolToken0Decimals" | "poolToken1Decimals"> = {
+      recordType: "ticker_snapshot",
+      runId: "old-run",
+      capturedAt: "2026-09-13T00:00:00.000Z",
+      ticker: "AAPL",
+      canonicalTokenAddress: aapl.tokenAddressMainnet,
+      configuredPoolAddress: aapl.poolAddressMainnet,
+      robinhoodAssetStatus: { status: "ok", value: "ACTIVE", asOf: "x", source: "s" },
+      robinhoodPrice: { status: "ok", value: { bid: "1", ask: "1", mid: 1, isTradingHalt: false, generatedAt: "x" }, asOf: "x", source: "s" },
+      chainlinkReference: { status: "ok", value: { normalizedPrice: 1, decimals: 8, updatedAt: "x" }, asOf: "x", source: "s" },
+      oraclePaused: { status: "ok", value: false, asOf: "x", source: "s" },
+      secondaryPrice: { status: "ok", value: 1, asOf: "x", source: "s" },
+      premiumDiscountPct: { status: "ok", value: 0, asOf: "x", source: "s" },
+      holderConcentration: { status: "ok", value: { holderRows: 1, top1Pct: 1, top5Pct: 1, top10Pct: 1 }, asOf: "x", source: "s" },
+      // This "old" fixture DOES already have the original P5-C0 fields,
+      // simulating a record written after P5-C0 but before P6-A0.
+      poolSqrtPriceX96: { status: "ok", value: "123", asOf: "x", source: "s" },
+      poolTick: { status: "ok", value: -1000, asOf: "x", source: "s" },
+      poolFeeTierBps: 3000,
+      poolLiquidity: { status: "ok", value: "456", asOf: "x", source: "s" },
+      poolToken0Balance: { status: "ok", value: "789", asOf: "x", source: "s" },
+      poolToken1Balance: { status: "ok", value: "1011", asOf: "x", source: "s" },
+    };
+    const asFullRecord: Awaited<ReturnType<typeof captureTickerSnapshot>> = oldRecord;
+    expect(asFullRecord.poolToken0Address).toBeUndefined();
+    expect(asFullRecord.poolToken1Address).toBeUndefined();
+    expect(asFullRecord.poolToken0Decimals).toBeUndefined();
+    expect(asFullRecord.poolToken1Decimals).toBeUndefined();
+    // The original P5-C0 fields this fixture DOES set remain intact and unaffected.
+    expect(asFullRecord.poolLiquidity?.status === "ok" && asFullRecord.poolLiquidity.value).toBe("456");
   });
 });

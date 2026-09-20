@@ -148,6 +148,11 @@ export async function captureTickerSnapshot(
   // secondaryForCalc's own computation/control-flow at all.
   let resolvedPoolAddressForTelemetry: `0x${string}` | null = null;
   let spotForTelemetry: PoolSpotPrice | null = null;
+  // P6-A0: threaded out the same way, purely so section 7 can persist them
+  // alongside the balances they describe — zero additional RPC calls,
+  // these are already fetched below for secondaryPrice's own math.
+  let decimals0ForTelemetry: number | null = null;
+  let decimals1ForTelemetry: number | null = null;
   if (ticker.tokenAddressMainnet && ticker.poolFeeTier && ticker.quoteAsset === "USDG") {
     try {
       const poolAddress = await deps.resolvePool(
@@ -167,6 +172,8 @@ export async function captureTickerSnapshot(
           deps.readDecimals(client, spot.token0),
           deps.readDecimals(client, spot.token1),
         ]);
+        decimals0ForTelemetry = decimals0;
+        decimals1ForTelemetry = decimals1;
         const normalizedPrice = computeStockTokenPriceInQuoteAsset({
           sqrtPriceX96: spot.sqrtPriceX96,
           token0: spot.token0,
@@ -236,6 +243,11 @@ export async function captureTickerSnapshot(
   let poolLiquidity: DataPoint<string> = unavailable("no_verified_pool", "no pool resolved this run", "uniswap_v3");
   let poolToken0Balance: DataPoint<string> = unavailable("no_verified_pool", "no pool resolved this run", "uniswap_v3");
   let poolToken1Balance: DataPoint<string> = unavailable("no_verified_pool", "no pool resolved this run", "uniswap_v3");
+  // P6-A0: default unavailable, same pattern as the other telemetry fields above.
+  let poolToken0Address: DataPoint<string> = unavailable("no_verified_pool", "no pool resolved this run", "uniswap_v3");
+  let poolToken1Address: DataPoint<string> = unavailable("no_verified_pool", "no pool resolved this run", "uniswap_v3");
+  let poolToken0Decimals: DataPoint<number> = unavailable("no_verified_pool", "no pool resolved this run", "uniswap_v3");
+  let poolToken1Decimals: DataPoint<number> = unavailable("no_verified_pool", "no pool resolved this run", "uniswap_v3");
   const poolFeeTierBps: number | null = ticker.poolFeeTier ?? null;
 
   try {
@@ -244,6 +256,21 @@ export async function captureTickerSnapshot(
       // zero additional RPC calls, purely reading already-fetched values.
       poolSqrtPriceX96 = { status: "ok", value: spotForTelemetry.sqrtPriceX96.toString(), asOf: now, source: "uniswap_v3 slot0()" };
       poolTick = { status: "ok", value: spotForTelemetry.tick, asOf: now, source: "uniswap_v3 slot0()" };
+      // P6-A0: same underlying read as the two fields above — the pool's
+      // own token0()/token1(), authoritative for THIS run, not from config.
+      poolToken0Address = { status: "ok", value: spotForTelemetry.token0, asOf: now, source: "uniswap_v3 token0()" };
+      poolToken1Address = { status: "ok", value: spotForTelemetry.token1, asOf: now, source: "uniswap_v3 token1()" };
+      // P6-A0: decimals were fetched in section 4 for secondaryPrice's own
+      // math; a decimals-specific failure there is indistinguishable from
+      // any other failure in that same try block, so availability here is
+      // coupled to that computation succeeding this run — documented in
+      // types.ts, not silently assumed independent.
+      if (decimals0ForTelemetry !== null) {
+        poolToken0Decimals = { status: "ok", value: decimals0ForTelemetry, asOf: now, source: `${spotForTelemetry.token0} decimals()` };
+      }
+      if (decimals1ForTelemetry !== null) {
+        poolToken1Decimals = { status: "ok", value: decimals1ForTelemetry, asOf: now, source: `${spotForTelemetry.token1} decimals()` };
+      }
     }
 
     if (resolvedPoolAddressForTelemetry) {
@@ -305,5 +332,9 @@ export async function captureTickerSnapshot(
     poolLiquidity: serializeDataPoint(poolLiquidity),
     poolToken0Balance: serializeDataPoint(poolToken0Balance),
     poolToken1Balance: serializeDataPoint(poolToken1Balance),
+    poolToken0Address: serializeDataPoint(poolToken0Address),
+    poolToken1Address: serializeDataPoint(poolToken1Address),
+    poolToken0Decimals: serializeDataPoint(poolToken0Decimals),
+    poolToken1Decimals: serializeDataPoint(poolToken1Decimals),
   };
 }

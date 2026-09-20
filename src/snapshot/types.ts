@@ -72,6 +72,32 @@ export interface TickerSnapshotRecord {
   poolToken0Balance?: SerializedDataPoint<string>; // bigint serialized as string
   /** token1.balanceOf(pool) — the pool's raw token1 reserve. One additional RPC call. */
   poolToken1Balance?: SerializedDataPoint<string>; // bigint serialized as string
+
+  // ---- P6-A0: pool token identity + decimals metadata ----------------
+  // Closes a historical-interpretation gap: poolToken0Balance/
+  // poolToken1Balance are raw smallest-unit integers with no persisted
+  // record of WHICH token address they belong to or how many decimals to
+  // apply — a future reader had no way to interpret them correctly in
+  // isolation. These four fields are the AUTHORITATIVE, live-resolved
+  // values for the pool actually used THIS run (from the same token0()/
+  // token1() reads already made when resolving the pool's spot price —
+  // never inferred from static config), so historical correctness does
+  // not depend on assuming today's config always matched the past.
+  // Zero additional RPC calls: both addresses and both decimals values
+  // were already being fetched for the existing secondaryPrice
+  // computation; this only persists them alongside the balances they
+  // describe. poolToken0Decimals/poolToken1Decimals share the same
+  // underlying read as secondaryPrice's own decimals lookup, so a failure
+  // there affects both — see captureTickerSnapshot.ts section 4/7 for the
+  // exact coupling.
+  /** The pool's token0 address, live-resolved this run (not from config). Same underlying read as poolSqrtPriceX96/poolTick. */
+  poolToken0Address?: SerializedDataPoint<string>;
+  /** The pool's token1 address, live-resolved this run (not from config). Same underlying read as poolSqrtPriceX96/poolTick. */
+  poolToken1Address?: SerializedDataPoint<string>;
+  /** decimals() for poolToken0Address, read during this run's secondaryPrice computation. Needed to interpret poolToken0Balance's raw smallest-unit integer. */
+  poolToken0Decimals?: SerializedDataPoint<number>;
+  /** decimals() for poolToken1Address, read during this run's secondaryPrice computation. Needed to interpret poolToken1Balance's raw smallest-unit integer. */
+  poolToken1Decimals?: SerializedDataPoint<number>;
 }
 
 /** One full run's raw registry response, archived verbatim (no analysis, no diffing — just data preserved for possible future use). */
